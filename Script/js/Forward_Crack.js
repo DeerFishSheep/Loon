@@ -37,7 +37,7 @@ const TEMPLATE_DEVICE = '00,"success":true,"message":"Success","data":{"isOEM":f
 
 // ---------------- 参数获取与模版选择 ----------------
 // 默认为 iCloud
-let FAKE_TEMPLATE = TEMPLATE_ICLOUD;
+var FAKE_TEMPLATE = TEMPLATE_ICLOUD;
 
 // 获取插件传入的 argument
 // 插件配置中：argument={bindingType}，值为 "设备" 或 "iCloud"
