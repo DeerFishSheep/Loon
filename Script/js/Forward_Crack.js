@@ -18,7 +18,7 @@ var CryptoJS=!function(t,e){"object"==typeof exports?module.exports=exports=e():
 var CryptoJS = module.exports;
 
 /* =======================================================
-   4. 【业务逻辑】Vvebo 本地解密篡改 (PersistentStore 版)
+   4. 【业务逻辑】Vvebo 本地解密篡改 (中文 Key 配置版)
    ======================================================= */
 const $ = new API();
 
@@ -38,18 +38,17 @@ const TEMPLATE_DEVICE = '00,"success":true,"message":"Success","data":{"isOEM":f
 // 默认为 iCloud
 let FAKE_TEMPLATE = TEMPLATE_ICLOUD;
 
-// 【核心修改】：使用 persistentStore 读取 #!select 的配置
-// 读取名为 "bindingType" 的配置项
+// 【核心修改】：读取中文 Key "显示绑定类型为"
 let userSelect = $persistentStore.read("显示绑定类型为");
 
-console.log(`[*] 读取配置 bindingType: [${userSelect}]`);
+console.log(`[*] 读取配置 [显示绑定类型为]: ${userSelect}`);
 
 if (userSelect && userSelect.indexOf("设备") !== -1) {
-    // 只要读取到的值里包含 "设备" 二字
+    // 只要配置值里包含 "设备"
     FAKE_TEMPLATE = TEMPLATE_DEVICE;
     console.log(`[+] 配置生效：切换为【设备绑定】模式`);
 } else {
-    // 没读到，或者读到的是 "iCloud"，或者是其他值
+    // 默认情况
     console.log(`[-] 配置结果：使用默认【iCloud】模式`);
 }
 
@@ -64,7 +63,7 @@ try {
         console.log("[!] 缺少 Body 或 AuthKey，跳过");
         $.done({});
     } else {
-        // 1. 清洗 (去引号)
+        // 1. 清洗
         let targetCiphertext = respBody.trim();
         if (targetCiphertext.startsWith('"') && targetCiphertext.endsWith('"')) {
             targetCiphertext = targetCiphertext.slice(1, -1);
