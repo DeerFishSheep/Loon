@@ -18,19 +18,17 @@ var CryptoJS=!function(t,e){"object"==typeof exports?module.exports=exports=e():
 var CryptoJS = module.exports;
 
 /* =======================================================
-   4. 【业务逻辑】Vvebo 本地解密篡改 (支持 Argument 动态切换)
+   4. 【业务逻辑】Vvebo 本地解密篡改 (PersistentStore 版)
    ======================================================= */
 const $ = new API();
 
 // ---------------- 配置区域 ----------------
-// Key: UTF-8 (32字节 -> AES-256)
 const STR_KEY = "75c4bc828b770497bfe74805724b72f4";
-// IV: Hex (16字节)
 const HEX_IV  = "62666537343830353732346237326634";
 
 // ---------------- 模版定义 ----------------
 
-// 模版 1: iCloud 绑定 (默认)
+// 模版 1: iCloud 绑定
 const TEMPLATE_ICLOUD = '00,"success":true,"message":"Success","data":{"isOEM":false,"isSubscribed":true,"expiresDate":null,"originalTransactionId":"666666666666666","bindingType":"icloud","bindingDatas":[{"icloudId":"_66666666666666666666666666666666","type":"icloud"}],"isEarlyBird":false},"randomKey":"REPLACE_ME","timestamp":0000000000}';
 
 // 模版 2: 设备绑定
@@ -40,31 +38,25 @@ const TEMPLATE_DEVICE = '00,"success":true,"message":"Success","data":{"isOEM":f
 // 默认为 iCloud
 let FAKE_TEMPLATE = TEMPLATE_ICLOUD;
 
-// 获取插件传入的 argument
-if (typeof $argument !== "undefined") {
-    // 1. 转换为字符串并转小写，避免大小写差异
-    // 2. 移除可能的引号和空格
-    let arg = $argument.toString().toLowerCase().trim().replace(/^"|"$/g, "");
-    
-    console.log(`[*] 插件参数原始值: ${$argument}`);
-    console.log(`[*] 处理后参数: ${arg}`);
-    
-    // 使用 includes 进行模糊匹配，只要包含 "device" 就认为是设备模式
-    if (arg.includes("device")) {
-        FAKE_TEMPLATE = TEMPLATE_DEVICE;
-        console.log(`[*] 模式匹配成功: 切换为【设备绑定】模版`);
-    } else {
-        console.log(`[*] 模式默认: 使用【iCloud绑定】模版`);
-    }
+// 【核心修改】：使用 persistentStore 读取 #!select 的配置
+// 读取名为 "bindingType" 的配置项
+let userSelect = $persistentStore.read("显示绑定类型为");
+
+console.log(`[*] 读取配置 bindingType: [${userSelect}]`);
+
+if (userSelect && userSelect.indexOf("设备") !== -1) {
+    // 只要读取到的值里包含 "设备" 二字
+    FAKE_TEMPLATE = TEMPLATE_DEVICE;
+    console.log(`[+] 配置生效：切换为【设备绑定】模式`);
 } else {
-    console.log(`[!] 未检测到参数，使用默认【iCloud绑定】模版`);
+    // 没读到，或者读到的是 "iCloud"，或者是其他值
+    console.log(`[-] 配置结果：使用默认【iCloud】模式`);
 }
 
 // ---------------- 主处理逻辑 ----------------
 
 try {
     let respBody = $response.body;
-    // 兼容 header 大小写
     const headers = $request.headers;
     const authKey = headers['x-auth-key'] || headers['X-Auth-Key'] || headers['X-AUTH-KEY'];
 
@@ -72,77 +64,60 @@ try {
         console.log("[!] 缺少 Body 或 AuthKey，跳过");
         $.done({});
     } else {
-        console.log(`[*] 捕获 AuthKey: ${authKey}`);
-
         // 1. 清洗 (去引号)
         let targetCiphertext = respBody.trim();
         if (targetCiphertext.startsWith('"') && targetCiphertext.endsWith('"')) {
             targetCiphertext = targetCiphertext.slice(1, -1);
         }
 
-        // 2. 准备 Key/IV
+        // 2. 解密
         const key = CryptoJS.enc.Utf8.parse(STR_KEY);
         const iv = CryptoJS.enc.Hex.parse(HEX_IV);
 
-        // 3. 解密
         const decryptedWords = CryptoJS.AES.decrypt(targetCiphertext, key, {
             iv: iv,
             mode: CryptoJS.mode.CBC,
             padding: CryptoJS.pad.NoPadding
         });
 
-        // 4. 分离头部乱码 (前4个Word = 16字节)
+        // 3. 数据切分
         const headerWords = CryptoJS.lib.WordArray.create(decryptedWords.words.slice(0, 4), 16);
-
-        // 5. 提取并处理 Body
-        // 跳过前16字节
         const bodyWordsRaw = CryptoJS.lib.WordArray.create(decryptedWords.words.slice(4), decryptedWords.sigBytes - 16);
-        const bodyHex = bodyWordsRaw.toString(CryptoJS.enc.Hex);
         
-        // 去 Padding (手动处理 NoPadding 模式下的 PKCS7 填充)
+        // 4. 处理 Padding
+        const bodyHex = bodyWordsRaw.toString(CryptoJS.enc.Hex);
         const lastByte = parseInt(bodyHex.slice(-2), 16);
         let finalBodyWords = bodyWordsRaw;
-        // 简单校验 padding 值是否合法 (1-16)
         if (lastByte > 0 && lastByte <= 16) {
-            // 重新计算长度
             finalBodyWords = CryptoJS.lib.WordArray.create(bodyWordsRaw.words, bodyWordsRaw.sigBytes - lastByte);
         }
 
-        // 6. 提取时间戳
+        // 5. 提取时间戳
         const decryptedStr = finalBodyWords.toString(CryptoJS.enc.Utf8);
-        console.log(`[DEBUG] 解密成功片段: ${decryptedStr.substring(0, 30)}...`);
-
         let originalTs = "1770135771";
-        // 尝试从原始响应中正则提取 timestamp
         const tsMatch = decryptedStr.match(/"timestamp"\s*:\s*(\d+)/);
         if (tsMatch && tsMatch[1]) {
             originalTs = tsMatch[1];
         }
 
-        // 7. 注入模版
+        // 6. 注入模版
         let newPayload = FAKE_TEMPLATE;
         newPayload = newPayload.replace(/"randomKey"\s*:\s*"[^"]*"/, `"randomKey":"${authKey}"`);
         newPayload = newPayload.replace(/"timestamp"\s*:\s*\d+/, `"timestamp":${originalTs}`);
 
-        console.log(`[MODIFY] 注入完成，准备重加密...`);
-
-        // 8. 重加密
+        // 7. 重加密
         const newPayloadWords = CryptoJS.enc.Utf8.parse(newPayload);
-        
-        // 拼接：原始 Header(16字节) + 伪造的 Payload
         const combinedWords = headerWords.clone();
         combinedWords.concat(newPayloadWords);
 
-        // 使用 PKCS7 自动填充加密
         const encrypted = CryptoJS.AES.encrypt(combinedWords, key, {
             iv: iv,
             mode: CryptoJS.mode.CBC,
             padding: CryptoJS.pad.Pkcs7
         });
 
-        // 9. 构造最终响应 (加引号)
         const finalResponse = `"${encrypted.toString()}"`;
-        console.log(`[SUCCESS] 本地重加密完成！`);
+        console.log(`[SUCCESS] 重加密完成`);
         
         $.done({ body: finalResponse });
     }
