@@ -1,12 +1,13 @@
 #!name=Forward Crack
-#!desc=Forward 解锁 Pro
+#!desc=Forward 解锁 Pro (支持自定义绑定类型)
+#!author=白了个鹿
 #!appUrl=https://apps.apple.com/app/id6503940939
-#!version=1.3.14
+#!version=1.3.15
 #!update=2026.02.04
 #!icon=https://i.hd-r.cn/07ee8249-c563-4af4-a332-15042dd0c9c1.webp
 
 [Argument]
-bindingType = select, "iCloud", "设备", tag = 显示绑定类型为, desc = 选择伪造的绑定类型，默认为iCloud
+bindingType = select, "iCloud", "Device", tag = 显示绑定类型为, desc = 选择伪造的绑定类型，Device=设备ID绑定
 
 [Script]
 # > Forward 解锁 Pro
