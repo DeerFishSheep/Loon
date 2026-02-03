@@ -7,7 +7,7 @@
 
 [Script]
 # > Forward 解锁 Pro
-http-response https://fluxapi.vvebo.vip/v1/purchase/iap/subscription script-path=替换为脚本实际地址, requires-body=true, timeout=60, tag=Forward Crack
+http-response https://fluxapi.vvebo.vip/v1/purchase/iap/subscription script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/refs/heads/main/Script/Loon-Plugin/Forward_Crack.plugin, requires-body=true, timeout=60, tag=Forward Crack
 
 [MITM]
 hostname = fluxapi.vvebo.vip
