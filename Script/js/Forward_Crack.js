@@ -18,27 +18,33 @@ var CryptoJS=!function(t,e){"object"==typeof exports?module.exports=exports=e():
 var CryptoJS = module.exports;
 
 /* =======================================================
-   4. 【业务逻辑】Vvebo 本地解密篡改 (中文 Key 配置版)
+   4. 【业务逻辑】Vvebo 本地解密篡改 (Loon 专用完美版)
    ======================================================= */
 const $ = new API();
 
 // ---------------- 配置区域 ----------------
+// Key: UTF-8 (32字节 -> AES-256)
+// 逆向得出: 75c4bc828b770497bfe74805724b72f4
 const STR_KEY = "75c4bc828b770497bfe74805724b72f4";
-const HEX_IV  = "62666537343830353732346237326634";
+
+// IV: UTF-8 (16字节)
+// 逆向得出: 73cfab358fe3aa0f
+const STR_IV = "73cfab358fe3aa0f";
 
 // ---------------- 模版定义 ----------------
 
-// 模版 1: iCloud 绑定
-const TEMPLATE_ICLOUD = '00,"success":true,"message":"Success","data":{"isOEM":false,"isSubscribed":true,"expiresDate":null,"originalTransactionId":"666666666666666","bindingType":"icloud","bindingDatas":[{"icloudId":"_66666666666666666666666666666666","type":"icloud"}],"isEarlyBird":false},"randomKey":"REPLACE_ME","timestamp":0000000000}';
+// 模版 1: iCloud 绑定 (纯 JSON)
+const TEMPLATE_ICLOUD = '{"status_code":200,"success":true,"message":"Success","data":{"isOEM":false,"isSubscribed":true,"expiresDate":null,"originalTransactionId":"666666666666666","bindingType":"icloud","bindingDatas":[{"icloudId":"_66666666666666666666666666666666","type":"icloud"}],"isEarlyBird":false},"randomKey":"REPLACE_ME","timestamp":1111111111}';
 
-// 模版 2: 设备绑定
-const TEMPLATE_DEVICE = '00,"success":true,"message":"Success","data":{"isOEM":false,"isSubscribed":true,"expiresDate":null,"originalTransactionId":"666666666666666","bindingType":"device","bindingDatas":[{"deviceId":"66666666666666666666666666666666","type":"device"}],"isEarlyBird":false},"randomKey":"REPLACE_ME","timestamp":0000000000}';
+// 模版 2: 设备绑定 (纯 JSON)
+const TEMPLATE_DEVICE = '{"status_code":200,"success":true,"message":"Success","data":{"isOEM":false,"isSubscribed":true,"expiresDate":null,"originalTransactionId":"666666666666666","bindingType":"device","bindingDatas":[{"deviceId":"66666666666666666666666666666666","type":"device"}],"isEarlyBird":false},"randomKey":"REPLACE_ME","timestamp":1111111111}';
 
 // ---------------- 参数获取与模版选择 ----------------
 // 默认为 iCloud
 let FAKE_TEMPLATE = TEMPLATE_ICLOUD;
 
 // 【核心修改】：读取中文 Key "显示绑定类型为"
+// Loon 特有 API: $persistentStore.read
 let userSelect = $persistentStore.read("显示绑定类型为");
 
 console.log(`[*] 读取配置 [显示绑定类型为]: ${userSelect}`);
@@ -55,61 +61,42 @@ if (userSelect && userSelect.indexOf("设备") !== -1) {
 // ---------------- 主处理逻辑 ----------------
 
 try {
-    let respBody = $response.body;
+    // 兼容 header 大小写 (虽然用户强调 X-Timestamp，但为了健壮性我们还是做一个兼容函数，优先取 X-Timestamp)
     const headers = $request.headers;
-    const authKey = headers['x-auth-key'] || headers['X-Auth-Key'] || headers['X-AUTH-KEY'];
+    const getHeader = (key) => headers[key] || headers[key.toLowerCase()] || headers[key.toUpperCase()];
 
-    if (!respBody || !authKey) {
-        console.log("[!] 缺少 Body 或 AuthKey，跳过");
+    const authKey = getHeader('x-auth-key');
+    // 用户强调: X-Timestamp 是这个格式！不是小写！
+    // 这里的逻辑是：尝试直接取 'X-Timestamp'，取不到再尝试 getHeader 兼容
+    const timestamp = headers['X-Timestamp'] || getHeader('timestamp');
+
+    if (!authKey) {
+        console.log("[!] 缺少 AuthKey，跳过");
         $.done({});
     } else {
-        // 1. 清洗
-        let targetCiphertext = respBody.trim();
-        if (targetCiphertext.startsWith('"') && targetCiphertext.endsWith('"')) {
-            targetCiphertext = targetCiphertext.slice(1, -1);
-        }
+        console.log(`[*] 捕获 AuthKey: ${authKey}`);
 
-        // 2. 解密
+        // 1. 准备 Key/IV
         const key = CryptoJS.enc.Utf8.parse(STR_KEY);
-        const iv = CryptoJS.enc.Hex.parse(HEX_IV);
+        const iv = CryptoJS.enc.Utf8.parse(STR_IV);
 
-        const decryptedWords = CryptoJS.AES.decrypt(targetCiphertext, key, {
-            iv: iv,
-            mode: CryptoJS.mode.CBC,
-            padding: CryptoJS.pad.NoPadding
-        });
-
-        // 3. 数据切分
-        const headerWords = CryptoJS.lib.WordArray.create(decryptedWords.words.slice(0, 4), 16);
-        const bodyWordsRaw = CryptoJS.lib.WordArray.create(decryptedWords.words.slice(4), decryptedWords.sigBytes - 16);
-        
-        // 4. 处理 Padding
-        const bodyHex = bodyWordsRaw.toString(CryptoJS.enc.Hex);
-        const lastByte = parseInt(bodyHex.slice(-2), 16);
-        let finalBodyWords = bodyWordsRaw;
-        if (lastByte > 0 && lastByte <= 16) {
-            finalBodyWords = CryptoJS.lib.WordArray.create(bodyWordsRaw.words, bodyWordsRaw.sigBytes - lastByte);
-        }
-
-        // 5. 提取时间戳
-        const decryptedStr = finalBodyWords.toString(CryptoJS.enc.Utf8);
-        let originalTs = "1770135771";
-        const tsMatch = decryptedStr.match(/"timestamp"\s*:\s*(\d+)/);
-        if (tsMatch && tsMatch[1]) {
-            originalTs = tsMatch[1];
-        }
-
-        // 6. 注入模版
+        // 2. 注入动态参数
         let newPayload = FAKE_TEMPLATE;
-        newPayload = newPayload.replace(/"randomKey"\s*:\s*"[^"]*"/, `"randomKey":"${authKey}"`);
-        newPayload = newPayload.replace(/"timestamp"\s*:\s*\d+/, `"timestamp":${originalTs}`);
+        // 替换 randomKey
+        newPayload = newPayload.replace('"REPLACE_ME"', `"${authKey}"`);
 
-        // 7. 重加密
-        const newPayloadWords = CryptoJS.enc.Utf8.parse(newPayload);
-        const combinedWords = headerWords.clone();
-        combinedWords.concat(newPayloadWords);
+        // 替换 timestamp (Template 中是 1111111111)
+        if (timestamp) {
+            console.log(`[*] 捕获 Timestamp (X-Timestamp): ${timestamp}`);
+            newPayload = newPayload.replace(/:1111111111/, `:${timestamp}`);
+        } else {
+            console.log("[!] 警告: 未找到 X-Timestamp Header，使用默认模版值");
+        }
 
-        const encrypted = CryptoJS.AES.encrypt(combinedWords, key, {
+        console.log(`[MODIFY] 注入完成，准备加密...`);
+
+        // 3. 直接加密 (标准 AES-256-CBC, Pkcs7)
+        const encrypted = CryptoJS.AES.encrypt(newPayload, key, {
             iv: iv,
             mode: CryptoJS.mode.CBC,
             padding: CryptoJS.pad.Pkcs7
@@ -117,7 +104,7 @@ try {
 
         const finalResponse = `"${encrypted.toString()}"`;
         console.log(`[SUCCESS] 重加密完成`);
-        
+
         $.done({ body: finalResponse });
     }
 
