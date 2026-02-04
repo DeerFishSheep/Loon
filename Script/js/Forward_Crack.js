@@ -61,14 +61,20 @@ if (userSelect && userSelect.indexOf("设备") !== -1) {
 // ---------------- 主处理逻辑 ----------------
 
 try {
-    // 兼容 header 大小写 (虽然用户强调 X-Timestamp，但为了健壮性我们还是做一个兼容函数，优先取 X-Timestamp)
+    // 兼容 header 大小写 (最稳妥的方式：遍历查找)
     const headers = $request.headers;
-    const getHeader = (key) => headers[key] || headers[key.toLowerCase()] || headers[key.toUpperCase()];
+    const getHeader = (targetKey) => {
+        const lowerTarget = targetKey.toLowerCase();
+        for (const key in headers) {
+            if (key.toLowerCase() === lowerTarget) {
+                return headers[key];
+            }
+        }
+        return null;
+    };
 
     const authKey = getHeader('x-auth-key');
-    // 用户强调: X-Timestamp 是这个格式！不是小写！
-    // 这里的逻辑是：尝试直接取 'X-Timestamp'，取不到再尝试 getHeader 兼容
-    const timestamp = headers['X-Timestamp'] || getHeader('timestamp');
+    const timestamp = getHeader('x-timestamp');
 
     if (!authKey) {
         console.log("[!] 缺少 AuthKey，跳过");
