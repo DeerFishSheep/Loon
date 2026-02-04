@@ -8,7 +8,7 @@
 
 [Script]
 # > Forward 解锁 Pro
-http-response https://fluxapi.vvebo.vip/v1/purchase/iap/subscription script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/refs/heads/main/Script/js/Forward_Crack_Universal.js, requires-body=true, timeout=60, tag=Forward Crack
+http-response https://fluxapi.vvebo.vip/v1/purchase/iap/subscription script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/refs/heads/main/Script/js/Forward_Crack_Universal.js, requires-body=true, timeout=60, tag=Forward Crack Universal
 
 [MITM]
 hostname = fluxapi.vvebo.vip
