@@ -1,0 +1,14 @@
+#!name=B站解锁任意皮肤
+#!desc=免费使用任意皮肤、入库
+#!author=白了个鹿
+#!appUrl=
+#!version=
+#!update=
+#!icon=https://i.hd-r.cn/8d4fb877-672f-4b0a-8c3b-d553e048d2e3.png
+
+[Script]
+# > B站解锁任意皮肤
+http-response ^https?:\/\/(api|app)\.bilibili\.com\/x\/(garb\/v2\/mall\/suit\/detail|garb\/user\/asset\/list|garb\/user\/equip\/load|garb\/user\/trial\/suit\/equity\/use|garb\/user\/item\/asset\/stat|garb\/skin|resource\/show\/skin) script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/refs/heads/main/Script/js/bilibili_skin.js, requires-body=true, timeout=60, tag=B站解锁任意皮肤
+
+[MITM]
+hostname = api.bilibili.com, app.bilibili.com
