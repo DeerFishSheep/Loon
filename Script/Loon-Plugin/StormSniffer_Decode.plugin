@@ -1,0 +1,12 @@
+#!name=StormSniffer Decode
+#!desc=StormSniffer 请求/响应体解密日志
+#!author=白了个鹿
+#!version=1.0.0
+#!update=2026.03.15
+
+[Script]
+# > StormSniffer 请求/响应体解密日志
+http-response ^https?:\/\/api\.x-storm\.com\/app\/ script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/refs/heads/main/Script/js/StormSniffer_Decode.js, requires-body=true, timeout=60, tag=StormSniffer Decode
+
+[MITM]
+hostname = api.x-storm.com
