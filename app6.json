@@ -31,6 +31,7 @@
       "category": "utilities",
       "developerName": "白鹿源",
       "iconURL": "https://aidoku.app/images/apple-touch-icon.png",
+      "localizedDescription": "📺 YouTube 21.05.3\n仅支持 iOS 16 及以上\n❗️❗️ 注入\n • 120hz\n • YTLite 5.2b4去广告、视频下载等\n • YTPiP 1.12.9 画中画 \n • YTHUD 2.2.2 解锁高画质，设置-视频偏好画质\n • YouMute 1.3.3 & YouQuality 1.3.6\n播放器界面显示画质/静音按钮，插件设置自行开启\n • 支持证书签名登陆谷歌账号\n\n🔧 TrollFools YouTube\n\n🐦 dayanch96  🐦 PoomSmart",
       "name": "YouTube_21.05.3_Plus@巨魔商店",
       "screenshots": [],
       "subtitle": "",
@@ -40,7 +41,6 @@
           "buildVersion": "",
           "date": "2026-03-16",
           "downloadURL": "https://gz.259952.xyz/sd/NIjOrYm2/IOS/YouTube_21.05.3_Plus%40%E5%B7%A8%E9%AD%94%E5%95%86%E5%BA%97.ipa?pwd=0000",
-          "localizedDescription": "📺 YouTube 21.05.3\n仅支持 iOS 16 及以上\n❗️❗️ 注入\n • 120hz\n • YTLite 5.2b4去广告、视频下载等\n • YTPiP 1.12.9 画中画 \n • YTHUD 2.2.2 解锁高画质，设置-视频偏好画质\n • YouMute 1.3.3 & YouQuality 1.3.6\n播放器界面显示画质/静音按钮，插件设置自行开启\n • 支持证书签名登陆谷歌账号\n\n🔧 TrollFools YouTube\n\n🐦 dayanch96  🐦 PoomSmart",
           "minOSVersion": "",
           "size": 131903530,
           "version": "21.05.3"
