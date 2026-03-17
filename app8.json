@@ -14,7 +14,7 @@
         {
           "buildVersion": "",
           "date": "2026-03-17",
-          "downloadURL": "https://github.com/Aidoku/Aidoku/releases/download/v0.8.1/Aidoku.ipa",
+          "downloadURL": "http://119.91.23.95:5244/sd/NIjOrYm2/IOS/Feather%E7%AD%BE%E5%90%8D%E5%B7%A5%E5%85%B7_2.6.0_%E9%87%8D%E6%B1%89%E5%8C%96%40%E5%B7%A8%E9%AD%94%E5%95%86%E5%BA%97.ipa?pwd=0000",
           "minOSVersion": "",
           "size": 14156627,
           "version": "2.6.0"
@@ -29,5 +29,5 @@
   "news": [],
   "sourceURL": "https://raw.githubusercontent.com/Aidoku/Aidoku/refs/heads/altstore/apps.json",
   "subtitle": "欢迎使用白鹿源\n\n源内资源均来自互联网\n\n如有侵权，请联系管理QQ1587760364下架处理",
-  "website": ""
+  "website": "https://raw.githubusercontent.com/Aidoku/Aidoku/refs/heads/altstore/apps.json"
 }
