@@ -4,7 +4,7 @@
       "bundleIdentifier": "xyz.gz259952.feather.2.6.0",
       "category": "utilities",
       "developerName": "白鹿源",
-      "iconURL": "http://119.91.23.95:5244/uploads/icons/8uqXgyY71yyFA8j2SPLq7ALKuDmEfZDD.jpg",
+      "iconURL": "https://119.91.23.95:5244/uploads/icons/8uqXgyY71yyFA8j2SPLq7ALKuDmEfZDD.jpg",
       "localizedDescription": "📱 Feather 2.6.0  证书签名工具\n • 频道重新汉化，更加本地化\n • 注入 120hz，更加流畅\n🆕 2.6.0\n• 代码库迁移至 iOS 26 SDK\n• 新增 Liquid Glass 图标\n• 新增 后台下载（iOS 26 BackgroundTasks）\n• 新增 资料库图标外观设置（浅色 / 深色，iOS 18.0+）\n◦ 支持 图标着色（iOS 18.2+）\n• 新增 自定义着色颜色\n• 新增 SSL 证书更新成功提示\n• 修复 SSL 证书过期导致卡在“Ready” 的问题\n• 修复 NSExtension 处理异常\n• 修复 部分应用未在资料库显示 的问题\n• 修复 部分应用无法安装 的问题\n• 修复 恶意 .deb 导致启动崩溃 的问题\n• 优化 arm64e slice 修复逻辑（iOS 26+）\n⚠️ 签名后无法安装问题\n1.签名后无法安装可能是代理工具在安装的时候域名走代理了，将域名 *.backloop.dev 加入规则改为直连即可解决\n2.设置-安装-服务器类型-半本地\n服务器类型可以用“完全本地”选项，不像半本地有弹窗网页，直接安装，不过有些wifi/数据网络需要自定义 DNS，否则会无法安装",
       "name": "Feather签名工具_2.6.0_重汉化@巨魔商店",
       "screenshots": [],
@@ -23,7 +23,7 @@
     }
   ],
   "description": "欢迎使用白鹿源\n\n源内资源均来自互联网\n\n如有侵权，请联系管理QQ1587760364下架处理",
-  "featuredApps": [],
+  "featuredApps": ["xyz.gz259952.feather.2.6.0"],
   "identifier": "xyz.gz259952.altstore",
   "name": "白鹿源",
   "news": [],
