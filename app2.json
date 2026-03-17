@@ -20,48 +20,6 @@
           "version": "2.6.0"
         }
       ]
-    },
-    {
-      "bundleIdentifier": "xyz.gz259952.youtube.21.05.3.plus",
-      "category": "utilities",
-      "developerName": "白鹿源",
-      "iconURL": "http://119.91.23.95:5244/uploads/icons/A1RI2ilCUHyFbYYbxXhMtH73LkzuMu4E.jpg",
-      "localizedDescription": "📺 YouTube 21.05.3\n仅支持 iOS 16 及以上\n❗️❗️ 注入\n • 120hz\n • YTLite 5.2b4去广告、视频下载等\n • YTPiP 1.12.9 画中画 \n • YTHUD 2.2.2 解锁高画质，设置-视频偏好画质\n • YouMute 1.3.3 & YouQuality 1.3.6\n播放器界面显示画质/静音按钮，插件设置自行开启\n • 支持证书签名登陆谷歌账号\n\n🔧 TrollFools YouTube\n\n🐦 dayanch96  🐦 PoomSmart",
-      "name": "YouTube_21.05.3_Plus@巨魔商店",
-      "screenshots": [],
-      "subtitle": "",
-      "tintColor": "",
-      "versions": [
-        {
-          "buildVersion": "",
-          "date": "2026-03-16",
-          "downloadURL": "http://119.91.23.95:5244/sd/NIjOrYm2/IOS/YouTube_21.05.3_Plus%40%E5%B7%A8%E9%AD%94%E5%95%86%E5%BA%97.ipa?pwd=0000",
-          "minOSVersion": "",
-          "size": 131903530,
-          "version": "21.05.3"
-        }
-      ]
-    },
-    {
-      "bundleIdentifier": "xyz.gz259952.youtube.21.10.2.n.plus.ios16.x",
-      "category": "utilities",
-      "developerName": "白鹿源",
-      "iconURL": "http://119.91.23.95:5244/uploads/icons/YEX91FwQhV60x1XXy0dEJIYmxXUGNYXW.png",
-      "localizedDescription": "🍄软件介绍：YouTube_N+Plus 注入包\n\n🔰相关介绍：\n📱 组合插件：YouTube Plus、YouPiP、YTUHD、画质按钮；插件选项都是嵌入到油管设置。\n📱 20.21.6 以后的版本，要求 iOS16.0 起步！",
-      "name": "YouTube_21.10.2_N+Plus_iOS16.x_秋名山",
-      "screenshots": [],
-      "subtitle": "",
-      "tintColor": "",
-      "versions": [
-        {
-          "buildVersion": "",
-          "date": "2026-03-15",
-          "downloadURL": "http://119.91.23.95:5244/sd/NIjOrYm2/IOS/YouTube_21.10.2_N%2BPlus_iOS16.x_%E7%A7%8B%E5%90%8D%E5%B1%B1.ipa?pwd=0000",
-          "minOSVersion": "",
-          "size": 142081816,
-          "version": "21.10.2"
-        }
-      ]
     }
   ],
   "description": "欢迎使用白鹿源\n\n源内资源均来自互联网\n\n如有侵权，请联系管理QQ1587760364下架处理",
