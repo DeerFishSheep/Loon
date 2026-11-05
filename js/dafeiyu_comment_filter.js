@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.8.1";
+const VERSION = "1.8.2";
 
 let THRESHOLD = 50;        // 达到这个分就删（可在插件参数里改）
 let SUSPECT = 30;          // 这个分以上、阈值以下：去拉头像再看一眼
@@ -167,7 +167,7 @@ try {
     if (typeof $argument.threshold === "number" && $argument.threshold > 0) {
       THRESHOLD = Math.round($argument.threshold);
     }
-    if (typeof $argument.deleteAnyAt === "boolean") DEL_ANY_AT = $argument.deleteAnyAt;
+    if (typeof $argument.atDelete === "boolean") DEL_ANY_AT = $argument.atDelete;
   }
 } catch (e) {}
 // 头像复核区间跟着阈值走：阈值 50 时 30~49，阈值 70 时 50~69
@@ -780,7 +780,8 @@ function finish(obj) {
       payload = new Uint8Array($utils.ungzip(payload));
     }
 
-    console.log("[DFY] v" + VERSION + " 收到 MainList " + buf.length + " 字节 压缩=" + compressed + " 头像=" + (AVATAR_ON ? "开" : "关"));
+    console.log("[DFY] v" + VERSION + " 收到 MainList " + buf.length + " 字节 压缩=" + compressed + " 头像=" + (AVATAR_ON ? "开" : "关") + " @删=" + (DEL_ANY_AT ? "开" : "关") + " 阈值=" + THRESHOLD);
+    try { console.log("[DFY] 参数: " + JSON.stringify($argument || {})); } catch (e) {}
 
     /* ---- 头像增强：只处理「快够分但还没到」的账号 ---- */
     const bonus = {};
