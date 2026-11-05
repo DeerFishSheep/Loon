@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.7.5";
+const VERSION = "1.7.6";
 
 const THRESHOLD = 50;      // 达到这个分就删
 const SUSPECT = 30;        // 这个分以上、阈值以下：去拉头像再看一眼
@@ -557,11 +557,20 @@ function scoreText(text, uname, ats) {
     }
   }
 
+  // 开头 @ 一个人：汇报体
   const lead = text.match(/^\s*@([^\s@:：，,。！!?？]{1,24})\s*([\s\S]*)$/);
   if (lead) {
     const rest = lead[2].trim();
     if (!rest) s += 15;
-    else if (rest.length >= 14) s += 20;
+    else if (rest.length >= 60) s += 42;
+    else if (rest.length >= 14) s += 28;
+  } else {
+    // 结尾 @ 一个人：也是汇报体（真人很少长篇大论再补一个 @）
+    const tail = text.match(/@([^\s@:：，,。！!?？]{1,24})\s*[。！!？?…～~]*$/);
+    if (tail) {
+      const before = text.slice(0, text.lastIndexOf("@")).trim();
+      if (before.length >= 20) s += 32;
+    }
   }
 
   const len = text.length;
