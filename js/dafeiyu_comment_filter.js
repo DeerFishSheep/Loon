@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.7.0";
+const VERSION = "1.7.1";
 
 const THRESHOLD = 60;      // 达到这个分就删
 const SUSPECT = 35;        // 这个分以上、阈值以下：去拉头像再看一眼
@@ -612,6 +612,8 @@ function isFishName(n) {
 /* ---------------- 过滤 ---------------- */
 let removed = 0;
 const logLines = [];
+const removedList = [];
+const keptList = [];
 
 // ReplyInfo 内部：field 1 是楼中楼
 function filterChildren(fields, level) {
@@ -629,13 +631,12 @@ function filterChildren(fields, level) {
     const inner = decode(x.v);
     const info = parseReply(inner);
     const score = scoreReply(info);
-    logLines.push("[DFY] 楼中楼 " + (info.name || "?") + " = " + score + " | " + info.text.slice(0, 16));
-
     if (score >= THRESHOLD) {
       removed++;
-      logLines.push("[DFY] 删除 Lv" + level + " " + (info.name || "?") + " 分数=" + score + " 文本=" + info.text.slice(0, 20));
+      removedList.push("[楼中楼] " + (info.name || "?") + " | " + score + " | " + info.text.slice(0, 24));
       continue;
     }
+    keptList.push("[楼中楼] " + (info.name || "?") + " | " + score + " | " + info.text.slice(0, 24));
     x.v = encode(filterChildren(inner, level + 1));
     out.push(x);
   }
@@ -660,13 +661,12 @@ function filterMainList(payload, bonus) {
       const info = parseReply(inner);
       let score = scoreReply(info);
       if (info.mid && bonus[info.mid] != null) score += bonus[info.mid];
-      logLines.push("[DFY] 主列表 " + (info.name || "?") + " = " + score + " | " + info.text.slice(0, 16));
-
       if (score >= THRESHOLD) {
         removed++;
-        logLines.push("[DFY] 删除 " + (info.name || "?") + " 分数=" + score + " 文本=" + info.text.slice(0, 20));
+        removedList.push((info.name || "?") + " | " + score + " | " + info.text.slice(0, 24));
         continue;
       }
+      keptList.push((info.name || "?") + " | " + score + " | " + info.text.slice(0, 24));
       x.v = encode(filterChildren(inner, 2));
       out.push(x);
       continue;
@@ -677,12 +677,12 @@ function filterMainList(payload, bonus) {
       const info = parseReply(inner);
       let topScore = scoreReply(info);
       if (info.mid && bonus[info.mid] != null) topScore += bonus[info.mid];
-      logLines.push("[DFY] 置顶 " + (info.name || "?") + " = " + topScore + " | " + info.text.slice(0, 16));
       if (topScore >= THRESHOLD) {
         removed++;
-        logLines.push("[DFY] 删除置顶 " + (info.name || "?") + " 文本=" + info.text.slice(0, 20));
+        removedList.push("[置顶] " + (info.name || "?") + " | " + topScore + " | " + info.text.slice(0, 24));
         continue;
       }
+      keptList.push("[置顶] " + (info.name || "?") + " | " + topScore + " | " + info.text.slice(0, 24));
       x.v = encode(filterChildren(inner, 2));
     }
 
@@ -775,6 +775,14 @@ function finish(obj) {
     const outPayload = filterMainList(payload, bonus);
 
     for (let i = 0; i < logLines.length; i++) console.log(logLines[i]);
+    if (removedList.length) {
+      console.log("[DFY] ─── 已删除 " + removedList.length + " 条 ───");
+      for (let i = 0; i < removedList.length; i++) console.log("[DFY] " + removedList[i]);
+    }
+    if (keptList.length) {
+      console.log("[DFY] ─── 保留 " + keptList.length + " 条 ───");
+      for (let i = 0; i < keptList.length; i++) console.log("[DFY] " + keptList[i]);
+    }
 
     if (!removed) {
       finish({});
