@@ -7,9 +7,9 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.7.1";
+const VERSION = "1.7.2";
 
-const THRESHOLD = 60;      // 达到这个分就删
+const THRESHOLD = 50;      // 达到这个分就删
 const SUSPECT = 35;        // 这个分以上、阈值以下：去拉头像再看一眼
 const MAX_AVATAR = 5;      // 每次最多拉几个头像，防止拖慢评论区
 const HIDE_CALLOUT = true; // 连「@大肥鱼」的召唤评论一起删
