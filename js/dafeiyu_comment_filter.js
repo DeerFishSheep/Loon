@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.8.6";
+const VERSION = "1.8.7";
 
 let THRESHOLD = 50;        // 达到这个分就删（可在插件参数里改）
 let SUSPECT = 30;          // 这个分以上、阈值以下：去拉头像再看一眼
@@ -152,41 +152,47 @@ let OWNER = "";
 let AVATAR_ON = true; // 头像识别开关，默认开
 // Loon 官方参数从 $argument 读（[Argument] 段声明），旧写法 persistentStore 兜底
 try {
-  if (typeof $argument === "object" && $argument && $argument.ownerName) {
-    OWNER = String($argument.ownerName);
+  if (typeof $argument === "object" && $argument) {
+    if ($argument["你的B站昵称"]) OWNER = String($argument["你的B站昵称"]);
+    else if ($argument.ownerName) OWNER = String($argument.ownerName);
   }
 } catch (e) {}
 try {
   if (!OWNER && typeof $persistentStore === "object" && $persistentStore.read) {
-    OWNER = $persistentStore.read("ownerName") || "";
+    OWNER = $persistentStore.read("你的B站昵称") || $persistentStore.read("ownerName") || "";
   }
 } catch (e) {}
 // Loon 可能把 switch 传成 boolean，也可能传成字符串 "true"/1
 function truthy(v) {
   return v === true || v === "true" || v === 1 || v === "1" || v === "on" || v === "yes";
 }
-function readArg(key) {
-  try {
-    if (typeof $argument === "object" && $argument && $argument[key] !== undefined) return $argument[key];
-  } catch (e) {}
-  try {
-    if (typeof $persistentStore === "object" && $persistentStore.read) {
-      const v = $persistentStore.read(key);
-      if (v !== null && v !== undefined && v !== "") return v;
-    }
-  } catch (e) {}
+// 支持多个候选名：中文优先，英文兜底
+function readArg() {
+  const keys = Array.prototype.slice.call(arguments);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    try {
+      if (typeof $argument === "object" && $argument && $argument[key] !== undefined) return $argument[key];
+    } catch (e) {}
+    try {
+      if (typeof $persistentStore === "object" && $persistentStore.read) {
+        const v = $persistentStore.read(key);
+        if (v !== null && v !== undefined && v !== "") return v;
+      }
+    } catch (e) {}
+  }
   return undefined;
 }
 
 try {
-  const av = readArg("avatarCheck");
+  const av = readArg("头像识别", "avatarCheck");
   if (av !== undefined) AVATAR_ON = truthy(av);
 
-  const th = readArg("threshold");
+  const th = readArg("删除阈值", "threshold");
   const thn = parseInt(th, 10);
   if (!isNaN(thn) && thn > 0) THRESHOLD = thn;
 
-  const ad = readArg("atDelete");
+  const ad = readArg("包含@就删", "atDelete");
   if (ad !== undefined) DEL_ANY_AT = truthy(ad);
 } catch (e) {}
 // 头像复核区间跟着阈值走：阈值 50 时 30~49，阈值 70 时 50~69
@@ -818,7 +824,7 @@ function finish(obj) {
       console.log("[DFY] 参数诊断异常: " + (e && e.message ? e.message : e));
     }
     try {
-      console.log("[DFY] store: atDelete=" + String($persistentStore.read("atDelete")) + " avatar=" + String($persistentStore.read("avatarCheck")));
+      console.log("[DFY] store: 含@即删=" + String($persistentStore.read("包含@就删")) + " 头像=" + String($persistentStore.read("头像识别")) + " / atDelete=" + String($persistentStore.read("atDelete")));
     } catch (e) {
       console.log("[DFY] store 读取异常: " + (e && e.message ? e.message : e));
     }
