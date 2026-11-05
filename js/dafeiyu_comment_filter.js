@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.7.2";
+const VERSION = "1.7.3";
 
 const THRESHOLD = 50;      // 达到这个分就删
 const SUSPECT = 35;        // 这个分以上、阈值以下：去拉头像再看一眼
@@ -774,12 +774,17 @@ function finish(obj) {
 
     const outPayload = filterMainList(payload, bonus);
 
-    for (let i = 0; i < logLines.length; i++) console.log(logLines[i]);
+    if (logLines.length) {
+      console.log("[DFY] ─── 头像分析 " + logLines.length + " 条 ───");
+      for (let i = 0; i < logLines.length; i++) console.log(logLines[i]);
+    }
     if (removedList.length) {
+      console.log(" ");
       console.log("[DFY] ─── 已删除 " + removedList.length + " 条 ───");
       for (let i = 0; i < removedList.length; i++) console.log("[DFY] " + removedList[i]);
     }
     if (keptList.length) {
+      console.log(" ");
       console.log("[DFY] ─── 保留 " + keptList.length + " 条 ───");
       for (let i = 0; i < keptList.length; i++) console.log("[DFY] " + keptList[i]);
     }
