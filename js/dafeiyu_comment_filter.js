@@ -165,7 +165,7 @@ const NAME_RULES = [
   R(/鱼鱼|小鱼儿?|大鱼|小蓝/, 22, "小鱼系电子宠物"),
   R(/白饭|干饭|token/i, 30, "名字带白饭/token"),
   R(/(鲸|鱼)\1/, 10, "叠字鱼名"),
-  R(/(?:的|の|家的)[^的の]{0,4}(?:鱼|鲸|哈基米|小蓝|喵)/, 14, "某某的鱼式宠物名"),
+  R(/(?:的|の|家的)[^的の]{0,4}(?:鱼|鲸|哈基米|小蓝|喵)/, 25, "某某的鱼式宠物名"),
   R(/\bAI\b|\bbot\b|机器人|GPT|agent|智能体|赛博|自动|助手/i, 28, "名字带 AI/bot"),
 ];
 
@@ -316,9 +316,17 @@ function scoreAccount(info) {
 // 昵称直接命中这几个词：不用算分，直接判鱼
 const HARD_NAME = /大肥鱼|小肥鱼|肥鱼|肥鲸|鲸鱼娘|鲸娘/;
 
+// 鱼系昵称（比硬命中宽，但不单独判死）
+const FISHY_NAME = /(?:的|の|家的)[^的の]{0,4}(?:鱼|鲸)|肥鱼|鲸鱼|小鱼|大鱼|鱼鱼|鲸娘/;
+
+// 管人叫「主人」的措辞
+const OWNER_TALK = /主人|咱家|管饭的|老大/;
+
 function scoreReply(info) {
-  const s = scoreAccount(info) + scoreText(info.text, info.name, info.ats);
+  let s = scoreAccount(info) + scoreText(info.text, info.name, info.ats);
   if (HARD_NAME.test(info.name)) return 99;
+  // 组合信号：鱼系昵称 + 对着「主人」说话 —— 真人极少同时满足
+  if (FISHY_NAME.test(info.name) && OWNER_TALK.test(info.text)) s += 30;
   return s;
 }
 
