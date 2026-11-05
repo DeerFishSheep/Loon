@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.8.0";
+const VERSION = "1.8.1";
 
 let THRESHOLD = 50;        // 达到这个分就删（可在插件参数里改）
 let SUSPECT = 30;          // 这个分以上、阈值以下：去拉头像再看一眼
@@ -618,7 +618,6 @@ const AT_RE = /@[^\s@:：，,。！!?？]{1,24}/;
 function scoreReply(info) {
   const text = info.text || "";
   // 用户手动开启的 @ 硬规则
-  if (DEL_ANY_AT && AT_RE.test(text)) return 99;
 
   let s = scoreAccount(info) + scoreText(text, info.name, info.ats);
   if (HARD_NAME.test(info.name)) return 99;
@@ -638,6 +637,7 @@ function isFishName(n) {
 let removed = 0;
 const logLines = [];
 const removedList = [];
+const directList = [];
 let avatarTried = 0;
 const keptList = [];
 
@@ -656,6 +656,13 @@ function filterChildren(fields, level) {
 
     const inner = decode(x.v);
     const info = parseReply(inner);
+
+    if (DEL_ANY_AT && AT_RE.test(info.text || "")) {
+      removed++;
+      directList.push("[楼中楼] " + (info.name || "?") + " | " + (info.text || "").slice(0, 24));
+      continue;
+    }
+
     const score = scoreReply(info);
     if (score >= THRESHOLD) {
       removed++;
@@ -685,6 +692,13 @@ function filterMainList(payload, bonus) {
     if (x.f === 2) {
       const inner = decode(x.v);
       const info = parseReply(inner);
+
+      if (DEL_ANY_AT && AT_RE.test(info.text || "")) {
+        removed++;
+        directList.push((info.name || "?") + " | " + (info.text || "").slice(0, 24));
+        continue;
+      }
+
       let score = scoreReply(info);
       if (info.mid && bonus[info.mid] != null) score += bonus[info.mid];
       if (score >= THRESHOLD) {
@@ -701,6 +715,13 @@ function filterMainList(payload, bonus) {
     if (x.f === 4 || x.f === 5 || x.f === 6) {
       const inner = decode(x.v);
       const info = parseReply(inner);
+
+      if (DEL_ANY_AT && AT_RE.test(info.text || "")) {
+        removed++;
+        directList.push("[置顶] " + (info.name || "?") + " | " + (info.text || "").slice(0, 24));
+        continue;
+      }
+
       let topScore = scoreReply(info);
       if (info.mid && bonus[info.mid] != null) topScore += bonus[info.mid];
       if (topScore >= THRESHOLD) {
@@ -810,9 +831,14 @@ function finish(obj) {
       console.log("[DFY] ─── 头像分析 " + avatarTried + " 条 ───");
       for (let i = 0; i < logLines.length; i++) console.log(logLines[i]);
     }
+    if (directList.length) {
+      console.log(" ");
+      console.log("[DFY] ─── @直接删除 " + directList.length + " 条 ───");
+      for (let i = 0; i < directList.length; i++) console.log("[DFY] " + directList[i]);
+    }
     if (removedList.length) {
       console.log(" ");
-      console.log("[DFY] ─── 已删除 " + removedList.length + " 条 ───");
+      console.log("[DFY] ─── 评分删除 " + removedList.length + " 条 ───");
       for (let i = 0; i < removedList.length; i++) console.log("[DFY] " + removedList[i]);
     }
     if (keptList.length) {
