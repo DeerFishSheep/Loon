@@ -7,10 +7,10 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.7.4";
+const VERSION = "1.7.5";
 
 const THRESHOLD = 50;      // 达到这个分就删
-const SUSPECT = 35;        // 这个分以上、阈值以下：去拉头像再看一眼
+const SUSPECT = 30;        // 这个分以上、阈值以下：去拉头像再看一眼
 const MAX_AVATAR = 5;      // 每次最多拉几个头像，防止拖慢评论区
 const HIDE_CALLOUT = true; // 连「@大肥鱼」的召唤评论一起删
 
@@ -765,8 +765,9 @@ function finish(obj) {
           const b = blues[i];
           if (b == null) continue;
           let add = 0;
-          if (b >= 0.4) add = 22;
-          else if (b >= 0.25) add = 12;
+          if (b >= 0.4) add = 30;
+          else if (b >= 0.25) add = 18;
+          else if (b >= 0.15) add = 8;
           if (add) {
             bonus[take[i].mid] = add;
             logLines.push("[DFY] 头像 " + (take[i].name || "?") + " 蓝 " + Math.round(b * 100) + "% +" + add);
