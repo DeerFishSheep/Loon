@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.8.2";
+const VERSION = "1.8.3";
 
 let THRESHOLD = 50;        // 达到这个分就删（可在插件参数里改）
 let SUSPECT = 30;          // 这个分以上、阈值以下：去拉头像再看一眼
@@ -161,14 +161,33 @@ try {
     OWNER = $persistentStore.read("ownerName") || "";
   }
 } catch (e) {}
-try {
-  if (typeof $argument === "object" && $argument) {
-    if (typeof $argument.avatarCheck === "boolean") AVATAR_ON = $argument.avatarCheck;
-    if (typeof $argument.threshold === "number" && $argument.threshold > 0) {
-      THRESHOLD = Math.round($argument.threshold);
+// Loon 可能把 switch 传成 boolean，也可能传成字符串 "true"/1
+function truthy(v) {
+  return v === true || v === "true" || v === 1 || v === "1" || v === "on" || v === "yes";
+}
+function readArg(key) {
+  try {
+    if (typeof $argument === "object" && $argument && $argument[key] !== undefined) return $argument[key];
+  } catch (e) {}
+  try {
+    if (typeof $persistentStore === "object" && $persistentStore.read) {
+      const v = $persistentStore.read(key);
+      if (v !== null && v !== undefined && v !== "") return v;
     }
-    if (typeof $argument.atDelete === "boolean") DEL_ANY_AT = $argument.atDelete;
-  }
+  } catch (e) {}
+  return undefined;
+}
+
+try {
+  const av = readArg("avatarCheck");
+  if (av !== undefined) AVATAR_ON = truthy(av);
+
+  const th = readArg("threshold");
+  const thn = parseInt(th, 10);
+  if (!isNaN(thn) && thn > 0) THRESHOLD = thn;
+
+  const ad = readArg("atDelete");
+  if (ad !== undefined) DEL_ANY_AT = truthy(ad);
 } catch (e) {}
 // 头像复核区间跟着阈值走：阈值 50 时 30~49，阈值 70 时 50~69
 SUSPECT = Math.max(30, THRESHOLD - 20);
