@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.6.0";
+const VERSION = "1.7.0";
 
 const THRESHOLD = 60;      // 达到这个分就删
 const SUSPECT = 35;        // 这个分以上、阈值以下：去拉头像再看一眼
@@ -148,6 +148,7 @@ function str(bytes) {
 
 /* ---------------- 配置 ---------------- */
 let OWNER = "";
+let AVATAR_ON = true; // 头像识别开关，默认开
 // Loon 官方参数从 $argument 读（[Argument] 段声明），旧写法 persistentStore 兜底
 try {
   if (typeof $argument === "object" && $argument && $argument.ownerName) {
@@ -157,6 +158,11 @@ try {
 try {
   if (!OWNER && typeof $persistentStore === "object" && $persistentStore.read) {
     OWNER = $persistentStore.read("ownerName") || "";
+  }
+} catch (e) {}
+try {
+  if (typeof $argument === "object" && $argument && typeof $argument.avatarCheck === "boolean") {
+    AVATAR_ON = $argument.avatarCheck;
   }
 } catch (e) {}
 
@@ -727,11 +733,11 @@ function finish(obj) {
       payload = new Uint8Array($utils.ungzip(payload));
     }
 
-    console.log("[DFY] v" + VERSION + " 收到 MainList " + buf.length + " 字节 压缩=" + compressed);
+    console.log("[DFY] v" + VERSION + " 收到 MainList " + buf.length + " 字节 压缩=" + compressed + " 头像=" + (AVATAR_ON ? "开" : "关"));
 
     /* ---- 头像增强：只处理「快够分但还没到」的账号 ---- */
     const bonus = {};
-    if (typeof $httpClient === "object") {
+    if (AVATAR_ON && typeof $httpClient === "object") {
       const main0 = decode(payload);
       const seen = {};
       const suspects = [];
