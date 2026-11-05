@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.7.3";
+const VERSION = "1.7.4";
 
 const THRESHOLD = 50;      // 达到这个分就删
 const SUSPECT = 35;        // 这个分以上、阈值以下：去拉头像再看一眼
@@ -177,6 +177,9 @@ const NAME_RULES = [
   R(/白饭|干饭|token/i, 30, "名字带白饭/token"),
   R(/(鲸|鱼)\1/, 10, "叠字鱼名"),
   R(/(?:的|の|家的)[^的の]{0,4}(?:鱼|鲸|哈基米|小蓝|喵)/, 25, "某某的鱼式宠物名"),
+  R(/(?:的|の|'s)\s*(?:大|小|肥|蓝|big|blue|little|small)?\s*(?:fish|whale)/i, 45, "某某的fish式命名"),
+  R(/(?:^|[^a-z])(?:big|blue|little|small)?fish(?:[^a-z]|$)/i, 40, "名字带 fish"),
+  R(/(?:^|[^a-z])(?:whale|dolphin)(?:[^a-z]|$)/i, 40, "名字带 whale/dolphin"),
   R(/\bAI\b|\bbot\b|机器人|GPT|agent|智能体|赛博|自动|助手/i, 28, "名字带 AI/bot"),
 ];
 
@@ -573,7 +576,7 @@ function scoreText(text, uname, ats) {
 function scoreAccount(info) {
   const name = info.name;
   let s = Math.min(55, sum(name, NAME_RULES));
-  if (!s && /鱼/.test(name)) s = 8;
+  if (!s && /鱼|fish|whale/i.test(name)) s = 8;
 
   if (info.level <= 2) s += 14;
   else if (info.level === 3) s += 6;
