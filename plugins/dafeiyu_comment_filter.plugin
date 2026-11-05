@@ -9,7 +9,7 @@ ownerName = input,,type=string,tag=你的B站昵称,desc=用来识别「@主人�
 
 [Script]
 # > 大肥鱼 · 评论过滤
-http-response ^https?:\/\/grpc\.biliapi\.net\/bilibili\.main\.community\.reply\.v1\.Reply\/MainList script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/main/js/dafeiyu_comment_filter.js?v=160, requires-body=true, binary-body-mode=true, timeout=10, tag=大肥鱼过滤
+http-response ^https?:\/\/grpc\.biliapi\.net\/bilibili\.main\.community\.reply\.v1\.Reply\/MainList script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/main/js/dafeiyu_comment_filter.js, requires-body=true, binary-body-mode=true, timeout=10, tag=大肥鱼过滤
 
 [Mitm]
 hostname = grpc.biliapi.net
