@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.7.8";
+const VERSION = "1.7.9";
 
 const THRESHOLD = 50;      // 达到这个分就删
 const SUSPECT = 30;        // 这个分以上、阈值以下：去拉头像再看一眼
@@ -625,6 +625,7 @@ function isFishName(n) {
 let removed = 0;
 const logLines = [];
 const removedList = [];
+let avatarTried = 0;
 const keptList = [];
 
 // ReplyInfo 内部：field 1 是楼中楼
@@ -768,11 +769,15 @@ function finish(obj) {
       }
 
       const take = suspects.slice(0, MAX_AVATAR);
+      avatarTried = take.length;
       if (take.length) {
         const blues = await Promise.all(take.map(function (s) { return fetchAvatarBlueP(s.face); }));
         for (let i = 0; i < take.length; i++) {
           const b = blues[i];
-          if (b == null) continue;
+          if (b == null) {
+            logLines.push("[DFY] 头像 " + (take[i].name || "?") + " 拉取失败（超时或解码失败）");
+            continue;
+          }
           let add = 0;
           if (b >= 0.4) add = 35;
           else if (b >= 0.25) add = 30;
@@ -788,8 +793,8 @@ function finish(obj) {
 
     const outPayload = filterMainList(payload, bonus);
 
-    if (logLines.length) {
-      console.log("[DFY] ─── 头像分析 " + logLines.length + " 条 ───");
+    if (avatarTried) {
+      console.log("[DFY] ─── 头像分析 " + avatarTried + " 条 ───");
       for (let i = 0; i < logLines.length; i++) console.log(logLines[i]);
     }
     if (removedList.length) {
