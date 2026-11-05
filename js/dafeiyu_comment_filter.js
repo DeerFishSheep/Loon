@@ -148,14 +148,15 @@ function str(bytes) {
 
 /* ---------------- 配置 ---------------- */
 let OWNER = "";
+// Loon 官方参数从 $argument 读（[Argument] 段声明），旧写法 persistentStore 兜底
 try {
-  if (typeof $persistentStore === "object" && $persistentStore.read) {
-    OWNER = $persistentStore.read("ownerName") || "";
+  if (typeof $argument === "object" && $argument && $argument.ownerName) {
+    OWNER = String($argument.ownerName);
   }
 } catch (e) {}
 try {
-  if (!OWNER && typeof $argument === "object" && $argument && $argument.ownerName) {
-    OWNER = String($argument.ownerName);
+  if (!OWNER && typeof $persistentStore === "object" && $persistentStore.read) {
+    OWNER = $persistentStore.read("ownerName") || "";
   }
 } catch (e) {}
 
