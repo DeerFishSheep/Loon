@@ -1,0 +1,150 @@
+#!name = 示例插件
+#!desc = 完整的 Loon 插件编写示例。每一段都带注释，照着改就能写出自己的插件。
+#!author = DeerFishSheep
+#!homepage = https://github.com/DeerFishSheep/Loon
+#!date = 2026-11-05 13:31:51
+#!tag = 示例,教程
+#!system = iOS,iPadOS,tvOS,macOS
+#!system_version = 15
+#!loon_version = 3.5.1(983)
+#!type = normal
+
+# ============================================================================
+# 一、元数据（#! 开头的行）
+# ============================================================================
+# 所有 #! 字段都用于描述插件，格式统一为  #!key = value（等号两边空格可有可无）
+#
+#   #!name            必填。插件名，显示在插件列表和详情页标题
+#   #!desc            描述。详情页「详细」区域显示，换行会保留
+#   #!author          作者。显示为「作者：@xxx」
+#   #!homepage        项目主页。详情页可点击跳转
+#   #!icon            图标 URL。留空或省略则用默认图标
+#   #!date            版本日期。官方说明「按原样显示」，可以写时分秒
+#   #!tag             分类标签。逗号分隔，显示为标签；版本号也可以放这里
+#   #!system          支持的系统：iOS,iPadOS,tvOS,macOS，省略表示全部
+#   #!system_version  最低系统版本，如 15
+#   #!loon_version    最低 Loon 版本，如 3.5.1(983)
+#   #!type            normal（默认）或 parser（解析器插件）
+#   #!source          作者指定下载地址的 SHA-256，防止被篡改；可选
+#
+# 重要：Loon 官方文档里没有 #!version 字段，写了也会被忽略。
+# 想要「单独显示版本号」，用 #!tag 或 #!date 承载。
+
+# ============================================================================
+# 二、用户参数（Build 733+）
+# ============================================================================
+# 格式：参数名 = 控件类型,默认值或可选值,type=类型,tag=标题,desc=说明
+# 脚本里用 $argument.参数名 读取，类型会保留（number 就是 Number）
+# 只有这里声明过的参数才会出现在 $argument 里
+#
+# 三种控件：
+#   input   文本输入。默认值可省略（写成 input,,type=string）
+#   select  下拉选择。第一个候选值就是默认值
+#   switch  开关。默认值只能是 true 或 false，type 只能是 boolean
+#
+# type 规则：input/select 支持 string 和 number，省略时默认 string；
+#            要填数字必须显式写 type=number，不会自动推断。
+#
+# 在 Rewrite 里用 ${参数名} 引用，例如 ${demoNumber}
+
+[Argument]
+demoText = input,"默认文本",type=string,tag=文本参数,desc=输入一段文字
+demoSelect = select,"选项A","选项B","选项C",type=string,tag=选择参数,desc=三选一
+demoSwitch = switch,true,type=boolean,tag=开关参数,desc=打开或关闭
+demoNumber = input,10,type=number,tag=数字参数,desc=只能填数字
+
+# ============================================================================
+# 三、通用配置
+# ============================================================================
+# 这一段会与主配置、其他插件的同名项合并，重复项去重
+#   bypass-tun   不走代理的网段/IP/域名
+#   skip-proxy   跳过 HTTP 代理的域名
+#   real-ip / always-real-ip  强制解析到指定 IP
+#   dns-server / doh-server / doq-server / doh3-server  自定义 DNS
+#   ipv6-vif = off  关闭 IPv6（Build 1007+）
+
+[General]
+bypass-tun = 192.168.0.0/16,10.0.0.0/8,*.local
+skip-proxy = 127.0.0.1,localhost
+
+# ============================================================================
+# 四、分流规则
+# ============================================================================
+# 插件里的规则只能用 DIRECT、REJECT 系列、PROXY 三种策略
+# 不写策略时默认 DIRECT
+# 格式：类型,值,策略
+
+[Rule]
+DOMAIN-SUFFIX,example.com,DIRECT
+DOMAIN-SUFFIX,doubleclick.net,REJECT
+
+# ============================================================================
+# 五、重写
+# ============================================================================
+# 常用动作：
+#   - reject          直接断开
+#   - reject-200      返回 200 空响应
+#   - reject-img      返回 1px 透明图
+#   - reject-dict     返回空 JSON
+#   - 302 / 307       重定向
+#   - header          增删改请求头/响应头
+# 也可以用 ${参数名} 插入用户参数
+
+[Rewrite]
+^https?://example\.com/ad/ - reject
+^https?://example\.com/api/ - reject-dict
+
+# ============================================================================
+# 六、脚本
+# ============================================================================
+# 两种写法，任选其一：
+#
+# 1) 传统写法（兼容性最好）
+#    http-response <URL正则> script-path=<脚本地址>, requires-body=true, binary-body-mode=false, timeout=10, tag=名字
+#
+#    http-request   <URL正则>  拦截请求
+#    http-response  <URL正则>  拦截响应
+#    cron "0 8 * * *"           定时执行
+#    network-changed            网络变化时执行
+#    generic                    手动触发
+#
+#    requires-body=true     读取完整 Body（不写拿不到 $request.body / $response.body）
+#    binary-body-mode=true  Body 以 Uint8Array 返回，处理 gRPC、图片等二进制必开
+#    timeout                默认 10 秒，异步脚本要留够
+#
+# 2) 新语法（Loon 3.5.1 / Build 983+）
+#    script("xxx.js", {${demoText}, ${demoSwitch}})
+#    参数会按位置传给脚本
+#
+# 脚本里可用的对象：
+#   $request.url / method / headers / body / h2_trailers
+#   $response.status / headers / body / h2_trailers
+#   $argument.xxx、$persistentStore、$notification
+#   $httpClient.get/post/...（回调里拿到结果，异步完成后再 $done）
+#   $utils.gzip / ungzip（Build 988+）、$utils.geoip / ipasn / ipaso
+#   $done({})               原样放行
+#   $done({ body: ... })    替换响应体
+
+[Script]
+http-response ^https?://example\.com/api/ script-path=https://example.com/example.js, requires-body=true, binary-body-mode=false, timeout=10, tag=示例脚本
+
+# ============================================================================
+# 七、MITM
+# ============================================================================
+# 要改 HTTPS 内容，域名必须写在这里，否则脚本拿不到明文
+# 支持通配符：*.example.com、*.example.*
+# 也可以写 IP:端口
+
+[Mitm]
+hostname = example.com, *.example.com
+
+# ============================================================================
+# 八、编写要点
+# ============================================================================
+# 1. 先装一个最简单的版本跑通链路，再往里加逻辑
+# 2. 脚本一定要 try/catch，异常时 $done({}) 原样放行，否则页面会白
+# 3. 二进制接口（gRPC / 图片）记得 binary-body-mode=true，否则 body 是乱码字符串
+# 4. 异步请求（$httpClient）要在回调完成后再 $done，注意 timeout
+# 5. 每次改动同步更新 #!date，方便用户判断有没有更新到
+# 6. 上线前先用本地 mock 数据测一遍，别直接拿用户流量试
+# 7. 插件文件和脚本都建议放在自己的公开仓库，用 raw 链接引用
