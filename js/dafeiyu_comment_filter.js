@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.7.7";
+const VERSION = "1.7.8";
 
 const THRESHOLD = 50;      // 达到这个分就删
 const SUSPECT = 30;        // 这个分以上、阈值以下：去拉头像再看一眼
@@ -773,9 +773,9 @@ function finish(obj) {
         for (let i = 0; i < take.length; i++) {
           const b = blues[i];
           if (b == null) continue;
-          // ≥35% 与 25%~35% 同为 30 分；15%~25% 给 25；更低也有 10 分保底
           let add = 0;
-          if (b >= 0.25) add = 30;
+          if (b >= 0.4) add = 35;
+          else if (b >= 0.25) add = 30;
           else if (b >= 0.15) add = 25;
           else add = 10;
           if (add) {
