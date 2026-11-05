@@ -7,10 +7,11 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.7.9";
+const VERSION = "1.8.0";
 
-const THRESHOLD = 50;      // 达到这个分就删
-const SUSPECT = 30;        // 这个分以上、阈值以下：去拉头像再看一眼
+let THRESHOLD = 50;        // 达到这个分就删（可在插件参数里改）
+let SUSPECT = 30;          // 这个分以上、阈值以下：去拉头像再看一眼
+let DEL_ANY_AT = false;    // 只要包含 @ 就删
 const MAX_AVATAR = 5;      // 每次最多拉几个头像，防止拖慢评论区
 const HIDE_CALLOUT = true; // 连「@大肥鱼」的召唤评论一起删
 
@@ -161,10 +162,16 @@ try {
   }
 } catch (e) {}
 try {
-  if (typeof $argument === "object" && $argument && typeof $argument.avatarCheck === "boolean") {
-    AVATAR_ON = $argument.avatarCheck;
+  if (typeof $argument === "object" && $argument) {
+    if (typeof $argument.avatarCheck === "boolean") AVATAR_ON = $argument.avatarCheck;
+    if (typeof $argument.threshold === "number" && $argument.threshold > 0) {
+      THRESHOLD = Math.round($argument.threshold);
+    }
+    if (typeof $argument.deleteAnyAt === "boolean") DEL_ANY_AT = $argument.deleteAnyAt;
   }
 } catch (e) {}
+// 头像复核区间跟着阈值走：阈值 50 时 30~49，阈值 70 时 50~69
+SUSPECT = Math.max(30, THRESHOLD - 20);
 
 /* ---------------- 规则 ---------------- */
 const R = (re, w, why) => ({ re: re, w: w, why: why });
@@ -606,8 +613,14 @@ const FISHY_NAME = /(?:的|の|家的)[^的の]{0,4}(?:鱼|鲸)|肥鱼|鲸鱼|�
 // 管人叫「主人」的措辞
 const OWNER_TALK = /主人|咱家|管饭的|老大/;
 
+const AT_RE = /@[^\s@:：，,。！!?？]{1,24}/;
+
 function scoreReply(info) {
-  let s = scoreAccount(info) + scoreText(info.text, info.name, info.ats);
+  const text = info.text || "";
+  // 用户手动开启的 @ 硬规则
+  if (DEL_ANY_AT && AT_RE.test(text)) return 99;
+
+  let s = scoreAccount(info) + scoreText(text, info.name, info.ats);
   if (HARD_NAME.test(info.name)) return 99;
   // 组合信号：鱼系昵称 + 对着「主人」说话 —— 真人极少同时满足
   if (FISHY_NAME.test(info.name) && OWNER_TALK.test(info.text)) s += 30;

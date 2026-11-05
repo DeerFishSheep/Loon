@@ -1,12 +1,14 @@
 #!name=B站大肥鱼评论过滤
-#!desc=「v1.7.9」识别并删除 B 站 App 评论区里的 AI 大肥鱼。按昵称、等级、认证、大会员、评论文本综合打分，接近阈值的再拉头像算「鲸鱼蓝」占比复核；连带删除「@大肥鱼」的召唤评论和楼中楼里的小鱼。只在本地生效。
+#!desc=「v1.8.0」识别并删除 B 站 App 评论区里的 AI 大肥鱼。按昵称、等级、认证、大会员、评论文本综合打分，接近阈值的再拉头像算「鲸鱼蓝」占比复核；连带删除「@大肥鱼」的召唤评论和楼中楼里的小鱼。只在本地生效。
 #!author=DeerFishSheep
-#!date=2026-11-05 14:26:27
+#!date=2026-11-05 14:35:42
 #!tag=B站,去广告,评论区
 
 [Argument]
 ownerName = input,,type=string,tag=你的B站昵称,desc=用来识别「@主人汇报」的评论；不填也能用，只是会少一条判断依据
 avatarCheck = switch,true,type=boolean,tag=头像识别,desc=接近阈值的账号再拉一次头像，算「鲸鱼蓝」占比复核；关掉更快，准确率略降
+threshold = input,50,type=number,tag=删除阈值,desc=分数达到这个值就删除，默认 50；调低删得多，调高删得少
+deleteAnyAt = switch,false,type=boolean,tag=包含@就删,desc=评论内容里只要出现 @ 就直接删除，不再看分数
 
 [Script]
 # > 大肥鱼 · 评论过滤
