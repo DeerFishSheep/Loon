@@ -12,7 +12,7 @@ atDelete = switch,false,type=boolean,tag=包含@就删,desc=评论内容里只�
 
 [Script]
 # > 大肥鱼 · 评论过滤
-http-response ^https?:\/\/grpc\.biliapi\.net\/bilibili\.main\.community\.reply\.v1\.Reply\/MainList script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/main/js/dafeiyu_comment_filter.js, requires-body=true, binary-body-mode=true, timeout=10, tag=大肥鱼过滤
+http-response ^https?:\/\/grpc\.biliapi\.net\/bilibili\.main\.community\.reply\.v1\.Reply\/MainList script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/44d2380/js/dafeiyu_comment_filter.js, requires-body=true, binary-body-mode=true, timeout=10, tag=大肥鱼过滤
 
 [Mitm]
 hostname = grpc.biliapi.net
