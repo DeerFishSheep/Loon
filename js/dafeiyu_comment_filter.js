@@ -7,7 +7,11 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const THRESHOLD = 60;   // 达到这个分就删
+const VERSION = "1.5.0";
+
+const THRESHOLD = 60;      // 达到这个分就删
+const SUSPECT = 35;        // 这个分以上、阈值以下：去拉头像再看一眼
+const MAX_AVATAR = 5;      // 每次最多拉几个头像，防止拖慢评论区
 const HIDE_CALLOUT = true; // 连「@大肥鱼」的召唤评论一起删
 
 /* ---------------- protobuf varint ---------------- */
@@ -228,12 +232,271 @@ function ownerLink(uname, mention) {
   return /[一-龥]/.test(core) && mention.indexOf(core) >= 0;
 }
 
+/* ================= 头像：拉图 → 解 PNG → 算鲸鱼蓝占比 =================
+ * 用的是 B 站 CDN 的 @48w_48h.png（48×48、8bit RGB、非交错）。
+ * PNG 的 IDAT 是 zlib，这里自带一个纯 JS inflate，不依赖运行时。
+ */
+const LENS = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
+const LEXT = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+const DISTS = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];
+const DEXT = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+const ORDER = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+
+function huffConstruct(lengths, off, n) {
+  const count = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  const symbol = new Array(n);
+  for (let i = 0; i < n; i++) count[lengths[off + i]]++;
+  count[0] = 0;
+  const offs = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  for (let len = 1; len < 15; len++) offs[len + 1] = offs[len] + count[len];
+  for (let i = 0; i < n; i++) {
+    if (lengths[off + i]) symbol[offs[lengths[off + i]]++] = i;
+  }
+  return { count: count, symbol: symbol };
+}
+
+function inflateRaw(src, start) {
+  let pos = start || 0;
+  let bitbuf = 0;
+  let bitcnt = 0;
+  const out = [];
+
+  function getbit() {
+    if (!bitcnt) { bitbuf = src[pos++]; bitcnt = 8; }
+    const b = bitbuf & 1;
+    bitbuf >>>= 1;
+    bitcnt--;
+    return b;
+  }
+  function getbits(n) {
+    let v = 0;
+    for (let i = 0; i < n; i++) v |= getbit() << i;
+    return v;
+  }
+  function decode(h) {
+    let code = 0, first = 0, index = 0;
+    for (let len = 1; len <= 15; len++) {
+      code |= getbit();
+      const count = h.count[len];
+      if (code - first < count) return h.symbol[index + (code - first)];
+      index += count;
+      first += count;
+      first <<= 1;
+      code <<= 1;
+    }
+    throw new Error("bad huffman");
+  }
+  function stored() {
+    bitbuf = 0; bitcnt = 0;
+    const len = src[pos] | (src[pos + 1] << 8);
+    pos += 4;
+    for (let i = 0; i < len; i++) out.push(src[pos++]);
+  }
+  function codes(lencode, distcode) {
+    for (;;) {
+      let sym = decode(lencode);
+      if (sym < 256) {
+        out.push(sym);
+      } else if (sym === 256) {
+        return;
+      } else {
+        sym -= 257;
+        const len = LENS[sym] + getbits(LEXT[sym]);
+        const dsym = decode(distcode);
+        const dist = DISTS[dsym] + getbits(DEXT[dsym]);
+        const from = out.length - dist;
+        for (let i = 0; i < len; i++) out.push(out[from + i]);
+      }
+    }
+  }
+  function fixed() {
+    const lengths = new Array(288);
+    for (let i = 0; i < 288; i++) {
+      if (i < 144) lengths[i] = 8;
+      else if (i < 256) lengths[i] = 9;
+      else if (i < 280) lengths[i] = 7;
+      else lengths[i] = 8;
+    }
+    codes(huffConstruct(lengths, 0, 288), huffConstruct(new Array(30).fill(5), 0, 30));
+  }
+  function dynamic() {
+    const nlen = getbits(5) + 257;
+    const ndist = getbits(5) + 1;
+    const ncode = getbits(4) + 4;
+    const lengths = new Array(286 + 30).fill(0);
+    for (let i = 0; i < ncode; i++) lengths[ORDER[i]] = getbits(3);
+    const lencode = huffConstruct(lengths, 0, 19);
+    lengths.fill(0);
+    let index = 0;
+    while (index < nlen + ndist) {
+      const sym = decode(lencode);
+      if (sym < 16) {
+        lengths[index++] = sym;
+      } else {
+        let len = 0, rep;
+        if (sym === 16) {
+          if (!index) throw new Error("repeat no first");
+          len = lengths[index - 1];
+          rep = 3 + getbits(2);
+        } else if (sym === 17) {
+          rep = 3 + getbits(3);
+        } else {
+          rep = 11 + getbits(7);
+        }
+        while (rep--) lengths[index++] = len;
+      }
+    }
+    codes(huffConstruct(lengths, 0, nlen), huffConstruct(lengths, nlen, ndist));
+  }
+
+  let last = 0;
+  while (!last) {
+    last = getbit();
+    const type = getbits(2);
+    if (type === 0) stored();
+    else if (type === 1) fixed();
+    else if (type === 2) dynamic();
+    else throw new Error("bad block");
+  }
+  return Uint8Array.from(out);
+}
+
+function zlibInflate(data) {
+  return inflateRaw(data, 2);
+}
+
+function paeth(a, b, c) {
+  const p = a + b - c;
+  const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+  if (pa <= pb && pa <= pc) return a;
+  if (pb <= pc) return b;
+  return c;
+}
+
+function pngUnfilter(raw, w, h, bpp) {
+  const stride = w * bpp;
+  const out = new Uint8Array(w * h * bpp);
+  let prev = new Uint8Array(stride);
+  let p = 0;
+  for (let y = 0; y < h; y++) {
+    const ft = raw[p++];
+    const line = raw.subarray(p, p + stride);
+    p += stride;
+    const cur = new Uint8Array(stride);
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? cur[x - bpp] : 0;
+      const b = prev[x];
+      const c = x >= bpp ? prev[x - bpp] : 0;
+      let v = line[x];
+      if (ft === 1) v += a;
+      else if (ft === 2) v += b;
+      else if (ft === 3) v += (a + b) >> 1;
+      else if (ft === 4) v += paeth(a, b, c);
+      cur[x] = v & 0xff;
+    }
+    out.set(cur, y * stride);
+    prev = cur;
+  }
+  return out;
+}
+
+function decodePng(buf) {
+  if (!buf || buf.length < 24 || buf[0] !== 0x89 || buf[1] !== 0x50) return null;
+  let p = 8, w = 0, h = 0, depth = 0, type = 0;
+  const idat = [];
+  let total = 0;
+
+  while (p + 8 <= buf.length) {
+    const len = ((buf[p] << 24) | (buf[p + 1] << 16) | (buf[p + 2] << 8) | buf[p + 3]) >>> 0;
+    const t = buf[p + 4];
+    if (t === 0x49 && buf[p + 5] === 0x48) {
+      const d = p + 8;
+      w = ((buf[d] << 24) | (buf[d + 1] << 16) | (buf[d + 2] << 8) | buf[d + 3]) >>> 0;
+      h = ((buf[d + 4] << 24) | (buf[d + 5] << 16) | (buf[d + 6] << 8) | buf[d + 7]) >>> 0;
+      depth = buf[d + 8];
+      type = buf[d + 9];
+      if (buf[d + 12]) return null;
+    } else if (t === 0x49 && buf[p + 5] === 0x44) {
+      idat.push(buf.subarray(p + 8, p + 8 + len));
+      total += len;
+    } else if (t === 0x49 && buf[p + 5] === 0x45) {
+      break;
+    }
+    p += 12 + len;
+  }
+
+  if (!w || !h || depth !== 8 || type !== 2) return null;
+
+  const z = new Uint8Array(total);
+  let o = 0;
+  for (let i = 0; i < idat.length; i++) { z.set(idat[i], o); o += idat[i].length; }
+
+  const raw = zlibInflate(z);
+  if (raw.length < h * (1 + w * 3)) return null;
+  return { w: w, h: h, px: pngUnfilter(raw, w, h, 3) };
+}
+
+function blueRatio(px, w, h) {
+  let blue = 0;
+  const n = w * h;
+  for (let i = 0; i < n; i++) {
+    const r = px[i * 3] / 255;
+    const g = px[i * 3 + 1] / 255;
+    const b = px[i * 3 + 2] / 255;
+    const mx = Math.max(r, g, b);
+    const mn = Math.min(r, g, b);
+    const v = mx;
+    const s = mx ? (mx - mn) / mx : 0;
+    if (s <= 0.35 || v <= 0.18 || mx !== b) continue;
+    let hh = mx === mn ? 0 : 60 * (4 + (r - g) / (mx - mn));
+    if (hh < 0) hh += 360;
+    if (hh >= 205 && hh <= 250) blue++;
+  }
+  return blue / n;
+}
+
+// 拉一个头像，回调返回蓝色占比或 null
+function fetchAvatarBlue(url, cb) {
+  if (!url || typeof $httpClient !== "object") return cb(null);
+  const src = url.split("@")[0] + "@48w_48h.png";
+  $httpClient.get({ url: src, "binary-mode": true, timeout: 2000 }, function (err, resp, data) {
+    if (err || !data) return cb(null);
+    try {
+      const img = decodePng(new Uint8Array(data));
+      cb(img ? blueRatio(img.px, img.w, img.h) : null);
+    } catch (e) {
+      cb(null);
+    }
+  });
+}
+
+function fetchAvatarBlueP(url) {
+  return new Promise(function (resolve) {
+    let done = false;
+    const timer = setTimeout(function () {
+      if (done) return;
+      done = true;
+      resolve(null);
+    }, 2500);
+    try {
+      fetchAvatarBlue(url, function (v) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(v);
+      });
+    } catch (e) {
+      if (!done) { done = true; clearTimeout(timer); resolve(null); }
+    }
+  });
+}
+
 /* ---------------- 解析单条评论 ---------------- */
 // ReplyInfo: replies=1, id=2, mid=5, content=12, member=13
 // Content:   message=1, at_name_to_mid=7
 // Member:    name=2, level=5, official_verify_type=6, vip_status=8
 function parseReply(fields) {
-  const info = { name: "", level: 0, verify: -1, vip: 0, text: "", ats: [] };
+  const info = { mid: "", name: "", face: "", level: 0, verify: -1, vip: 0, text: "", ats: [] };
 
   for (let i = 0; i < fields.length; i++) {
     const x = fields[i];
@@ -241,7 +504,9 @@ function parseReply(fields) {
       const m = decode(x.v);
       for (let j = 0; j < m.length; j++) {
         const y = m[j];
-        if (y.f === 2 && y.w === 2) info.name = clean(str(y.v));
+        if (y.f === 1 && y.w === 0) info.mid = String(y.v);
+        else if (y.f === 2 && y.w === 2) info.name = clean(str(y.v));
+        else if (y.f === 4 && y.w === 2) info.face = str(y.v);
         else if (y.f === 5 && y.w === 0) info.level = Number(y.v);
         else if (y.f === 6 && y.w === 0) info.verify = Number(y.v);
         else if (y.f === 8 && y.w === 0) info.vip = Number(y.v);
@@ -371,7 +636,8 @@ function filterChildren(fields, level) {
 }
 
 // MainListReply：replies=2（列表），up_top=4，admin_top=5，vote_top=6（单条）
-function filterMainList(payload) {
+function filterMainList(payload, bonus) {
+  bonus = bonus || {};
   const main = decode(payload);
   const out = [];
 
@@ -385,7 +651,8 @@ function filterMainList(payload) {
     if (x.f === 2) {
       const inner = decode(x.v);
       const info = parseReply(inner);
-      const score = scoreReply(info);
+      let score = scoreReply(info);
+      if (info.mid && bonus[info.mid] != null) score += bonus[info.mid];
       logLines.push("[DFY] 主列表 " + (info.name || "?") + " = " + score + " | " + info.text.slice(0, 16));
 
       if (score >= THRESHOLD) {
@@ -401,7 +668,8 @@ function filterMainList(payload) {
     if (x.f === 4 || x.f === 5 || x.f === 6) {
       const inner = decode(x.v);
       const info = parseReply(inner);
-      const topScore = scoreReply(info);
+      let topScore = scoreReply(info);
+      if (info.mid && bonus[info.mid] != null) topScore += bonus[info.mid];
       logLines.push("[DFY] 置顶 " + (info.name || "?") + " = " + topScore + " | " + info.text.slice(0, 16));
       if (topScore >= THRESHOLD) {
         removed++;
@@ -424,53 +692,95 @@ function finish(obj) {
   $done(obj || {});
 }
 
-try {
-  const url = $request.url || "";
+(async function () {
+  try {
+    const url = $request.url || "";
 
-  if (url.indexOf("bilibili.main.community.reply.v1.Reply/MainList") < 0) {
-    finish({});
-  } else {
-    const raw = $response.body;
-
-    if (!raw || typeof raw === "string") {
-      console.log("[DFY] body 不是二进制，检查 binary-body-mode");
+    if (url.indexOf("bilibili.main.community.reply.v1.Reply/MainList") < 0) {
       finish({});
-    } else {
-      const buf = new Uint8Array(raw);
-      if (buf.length < 6) {
+      return;
+    }
+
+    const raw = $response.body;
+    if (!raw || typeof raw === "string") {
+      console.log("[DFY] v" + VERSION + " body 不是二进制，检查 binary-body-mode");
+      finish({});
+      return;
+    }
+
+    const buf = new Uint8Array(raw);
+    if (buf.length < 6) {
+      finish({});
+      return;
+    }
+
+    const compressed = buf[0] !== 0;
+    let payload = buf.subarray(5);
+
+    if (compressed) {
+      if (typeof $utils !== "object" || typeof $utils.ungzip !== "function") {
+        console.log("[DFY] v" + VERSION + " 需要 ungzip 但当前 Loon 不支持");
         finish({});
-      } else {
-        const compressed = buf[0] !== 0;
-        let payload = buf.subarray(5);
+        return;
+      }
+      payload = new Uint8Array($utils.ungzip(payload));
+    }
 
-        if (compressed) {
-          if (typeof $utils !== "object" || typeof $utils.ungzip !== "function") {
-            console.log("[DFY] 需要 ungzip 但当前 Loon 不支持");
-            finish({});
-          } else {
-            payload = new Uint8Array($utils.ungzip(payload));
-          }
+    console.log("[DFY] v" + VERSION + " 收到 MainList " + buf.length + " 字节 压缩=" + compressed);
+
+    /* ---- 头像增强：只处理「快够分但还没到」的账号 ---- */
+    const bonus = {};
+    if (typeof $httpClient === "object") {
+      const main0 = decode(payload);
+      const seen = {};
+      const suspects = [];
+
+      for (let i = 0; i < main0.length; i++) {
+        const x = main0[i];
+        if (x.w !== 2) continue;
+        if (x.f !== 2 && x.f !== 4 && x.f !== 5 && x.f !== 6) continue;
+        let info;
+        try { info = parseReply(decode(x.v)); } catch (e) { continue; }
+        const s = scoreReply(info);
+        if (s >= SUSPECT && s < THRESHOLD && info.face && !seen[info.mid]) {
+          seen[info.mid] = 1;
+          suspects.push(info);
         }
+      }
 
-        const outPayload = filterMainList(payload);
-
-        for (let i = 0; i < logLines.length; i++) console.log(logLines[i]);
-
-        if (!removed) {
-          finish({});
-        } else {
-          const out = new Uint8Array(5 + outPayload.length);
-          out[0] = 0;
-          new DataView(out.buffer).setUint32(1, outPayload.length, false);
-          out.set(outPayload, 5);
-
-          console.log("[DFY] 共删除 " + removed + " 条，输出 " + out.length + " 字节");
-          finish({ body: out });
+      const take = suspects.slice(0, MAX_AVATAR);
+      if (take.length) {
+        const blues = await Promise.all(take.map(function (s) { return fetchAvatarBlueP(s.face); }));
+        for (let i = 0; i < take.length; i++) {
+          const b = blues[i];
+          if (b == null) continue;
+          let add = 0;
+          if (b >= 0.4) add = 22;
+          else if (b >= 0.25) add = 12;
+          if (add) {
+            bonus[take[i].mid] = add;
+            logLines.push("[DFY] 头像 " + (take[i].name || "?") + " 蓝 " + Math.round(b * 100) + "% +" + add);
+          }
         }
       }
     }
+
+    const outPayload = filterMainList(payload, bonus);
+
+    for (let i = 0; i < logLines.length; i++) console.log(logLines[i]);
+
+    if (!removed) {
+      finish({});
+    } else {
+      const out = new Uint8Array(5 + outPayload.length);
+      out[0] = 0;
+      new DataView(out.buffer).setUint32(1, outPayload.length, false);
+      out.set(outPayload, 5);
+      console.log("[DFY] v" + VERSION + " 共删除 " + removed + " 条，输出 " + out.length + " 字节");
+      finish({ body: out });
+    }
+  } catch (e) {
+    console.log("[DFY] 出错: " + (e && e.message ? e.message : e));
+    finish({});
   }
-} catch (e) {
-  console.log("[DFY] 出错: " + (e && e.message ? e.message : e));
-  finish({});
-}
+})();
