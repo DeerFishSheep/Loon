@@ -7,7 +7,7 @@
  * Loon 配置见 plugins/dafeiyu_comment_filter.plugin
  */
 
-const VERSION = "1.5.0";
+const VERSION = "1.6.0";
 
 const THRESHOLD = 60;      // 达到这个分就删
 const SUSPECT = 35;        // 这个分以上、阈值以下：去拉头像再看一眼
