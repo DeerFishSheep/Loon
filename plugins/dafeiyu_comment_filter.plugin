@@ -3,6 +3,7 @@
 #!author=DeerFishSheep
 #!date=2026-11-05 15:03:43
 #!tag=B站,去广告,评论区
+#!icon=https://raw.githubusercontent.com/DeerFishSheep/icons/main/%E5%BA%94%E7%94%A8%E5%9B%BE%E6%A0%87/bilibili-pink.png
 #!input = 你的B站昵称
 #!input = 删除阈值
 #!select = 头像识别,true,false
