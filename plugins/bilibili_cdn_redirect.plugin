@@ -1,0 +1,44 @@
+#!name = BiliBili CDN 重定向
+#!desc = 把 B 站港澳台/海外分片 CDN 重定向到国内镜像，改善挂代理或免流节点看视频卡顿。适用于被判定为海外用户、被分配 OverseaVideo 节点的场景。
+#!author = DeerFishSheep
+#!homepage = https://github.com/DeerFishSheep/Loon
+#!system = iOS,iPadOS,tvOS,macOS
+#!system_version = 15
+#!date = 2026-11-09
+#!tag = BiliBili,重定向
+
+[Argument]
+OverseaCDN = select,"upos-sz-mirrorali.bilivideo.com","upos-sz-mirrorcos.bilivideo.com","upos-sz-mirrorhw.bilivideo.com","upos-sz-mirrorhwo1.bilivideo.com","upos-sz-mirror08c.bilivideo.com",type=string,tag=港澳台 CDN,desc=OverseaVideo 分片重定向目标，默认阿里云
+BStarCDN = select,"upos-sz-mirrorali.bilivideo.com","upos-sz-mirrorcos.bilivideo.com","upos-sz-mirrorhw.bilivideo.com","upos-sz-mirrorhwo1.bilivideo.com","upos-sz-mirror08c.bilivideo.com",type=string,tag=国际版 CDN,desc=BStar 分片重定向目标，默认阿里云
+PCDNCDN = select,"upos-sz-mirrorali.bilivideo.com","upos-sz-mirrorcos.bilivideo.com","upos-sz-mirrorhw.bilivideo.com",type=string,tag=PCDN 兜底 CDN,desc=mcdn 分片重定向目标，默认阿里云
+
+[General]
+force-http-engine-hosts = upos-sz-mirror*.bilivideo.com:80, cn-hk-eq-*.bilivideo.com:80, upos-*-mirrorakam.akamaized.net:80, *.mcdn.bilivideo.cn:8000, *.mcdn.bilivideo.cn:8082, *:4480, *:4483, *:9102
+
+[Rewrite]
+# 港澳台 / 海外分片（OverseaVideo）：原 CDN 回源到国内时容易断流，换成国内镜像
+request if ${url} ~= /^http:\/\/upos-hz-mirrorakam\.akamaized\.net(?::80)?(\/.*)$/ as m then url.replace("http://${OverseaCDN}${m.1}")
+request if ${url} ~= /^http:\/\/upos-sz-mirrorakam\.akamaized\.net(?::80)?(\/.*)$/ as m then url.replace("http://${OverseaCDN}${m.1}")
+request if ${url} ~= /^http:\/\/upos-sz-mirror[a-z0-9-]*ov\.bilivideo\.com(?::80)?(\/.*)$/ as m then url.replace("http://${OverseaCDN}${m.1}")
+request if ${url} ~= /^http:\/\/cn-hk-eq-[a-z0-9-]+\.bilivideo\.com(?::80)?(\/.*)$/ as m then url.replace("http://${OverseaCDN}${m.1}")
+request if ${url} ~= /^https:\/\/upos-hz-mirrorakam\.akamaized\.net(?::(?:443|4483))?(\/.*)$/ as m then url.replace("https://${OverseaCDN}${m.1}")
+request if ${url} ~= /^https:\/\/upos-sz-mirrorakam\.akamaized\.net(?::(?:443|4483))?(\/.*)$/ as m then url.replace("https://${OverseaCDN}${m.1}")
+request if ${url} ~= /^https:\/\/upos-sz-mirror[a-z0-9-]*ov\.bilivideo\.com(?::(?:443|4483))?(\/.*)$/ as m then url.replace("https://${OverseaCDN}${m.1}")
+request if ${url} ~= /^https:\/\/cn-hk-eq-[a-z0-9-]+\.bilivideo\.com(?::(?:443|4483))?(\/.*)$/ as m then url.replace("https://${OverseaCDN}${m.1}")
+
+# 国际版分片（BStar）
+request if ${url} ~= /^http:\/\/upos-sz-mirror[a-z0-9-]*bstar1\.bilivideo\.com(?::80)?(\/.*)$/ as m then url.replace("http://${BStarCDN}${m.1}")
+request if ${url} ~= /^http:\/\/upos-bstar1-mirrorakam\.akamaized\.net(?::80)?(\/.*)$/ as m then url.replace("http://${BStarCDN}${m.1}")
+request if ${url} ~= /^https:\/\/upos-sz-mirror[a-z0-9-]*bstar1\.bilivideo\.com(?::(?:443|4483))?(\/.*)$/ as m then url.replace("https://${BStarCDN}${m.1}")
+request if ${url} ~= /^https:\/\/upos-bstar1-mirrorakam\.akamaized\.net(?::(?:443|4483))?(\/.*)$/ as m then url.replace("https://${BStarCDN}${m.1}")
+
+# MCDN / PCDN：路径里多一层 /v1/resource，替换时要剥掉
+request if ${url} ~= /^http:\/\/[a-z0-9-]+\.mcdn\.bilivideo\.cn(?::(?:8000|8082))?\/v1\/resource(\/upgcxcode\/.*)$/ as m then url.replace("http://${PCDNCDN}${m.1}")
+request if ${url} ~= /^http:\/\/[a-z0-9-]+\.mcdn\.bilivideo\.cn(?::(?:4483|9102))?(\/upgcxcode\/.*)$/ as m then url.replace("http://${PCDNCDN}${m.1}")
+request if ${url} ~= /^http:\/\/[^\/:]+:4480(\/upgcxcode\/.*)$/ as m then url.replace("http://proxy-tf-all-ws.bilivideo.com${m.1}")
+
+# 裸 IP PCDN（App 有时直接下发 http://1.2.3.4:8000/v1/resource/），同样剥掉 /v1/resource
+request if ${url} ~= /^http:\/\/\d{1,3}(?:\.\d{1,3}){3}:8000\/v1\/resource(\/upgcxcode\/.*)$/ as m then url.replace("http://${PCDNCDN}${m.1}")
+
+[MITM]
+hostname = upos-sz-mirror*.bilivideo.com, cn-hk-eq-*.bilivideo.com, upos-*-mirrorakam.akamaized.net, *.mcdn.bilivideo.cn
