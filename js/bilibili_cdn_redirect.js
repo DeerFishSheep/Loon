@@ -1,35 +1,17 @@
 /**
  * BiliBili CDN 重定向 —— 把港澳台/海外分片 CDN 换到国内镜像。
  *
- * 取值优先级（高 → 低）：
- *   1. B 站内 Enhanced 面板（PreferencePanes 存到 $persistentStore，key=Biliverse）
- *   2. Loon 插件参数 $argument
- *   3. 本文件 DEFAULTS
+ * Loon 插件设置里选的是中文名，这里映射到真实域名；老配置里直接存域名的也认。
  */
-const DEFAULTS = {
-  OverseaCDN: "upos-sz-mirrorali.bilivideo.com",
-  BStarCDN: "upos-sz-mirrorali.bilivideo.com",
-  PCDNCDN: "upos-sz-mirrorali.bilivideo.com",
-  MCDN: "proxy-tf-all-ws.bilivideo.com",
-};
+const DEFAULT_CDN = "upos-sz-mirrorali.bilivideo.com";
+const MCDN = "proxy-tf-all-ws.bilivideo.com";
 
-// 面板里存的是 Redirect.Settings.Host.{OverseaVideo,BStar,PCDN,MCDN}
-function panelConfig() {
-  try {
-    const raw = $persistentStore.read("Biliverse");
-    if (!raw) return {};
-    const host = ((JSON.parse(raw) || {}).Redirect || {}).Settings || {};
-    const h = host.Host || {};
-    return {
-      OverseaCDN: h.OverseaVideo,
-      BStarCDN: h.BStar,
-      PCDNCDN: h.PCDN,
-      MCDN: h.MCDN,
-    };
-  } catch (e) {
-    return {};
-  }
-}
+const CDN_MAP = {
+  "阿里云 CDN": "upos-sz-mirrorali.bilivideo.com",
+  "腾讯云 CDN": "upos-sz-mirrorcos.bilivideo.com",
+  "华为云 CDN": "upos-sz-mirrorhw.bilivideo.com",
+  "融合 CDN（08c）": "upos-sz-mirror08c.bilivideo.com",
+};
 
 function argConfig() {
   const a = $argument;
@@ -45,10 +27,15 @@ function argConfig() {
   return out;
 }
 
-const cfg = Object.assign({}, DEFAULTS, argConfig(), panelConfig());
-Object.keys(DEFAULTS).forEach((k) => {
-  if (!cfg[k]) cfg[k] = DEFAULTS[k];
-});
+function resolveCdn(v) {
+  if (!v) return DEFAULT_CDN;
+  if (CDN_MAP[v]) return CDN_MAP[v];
+  const m = String(v).match(/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:bilivideo\.(?:com|cn)|akamaized\.net)/i);
+  return m ? m[0] : DEFAULT_CDN;
+}
+
+const cfg = argConfig();
+const CDN = resolveCdn(cfg.VideoCDN || cfg.OverseaCDN || cfg.BStarCDN || cfg.PCDNCDN);
 
 const m = String($request.url).match(/^(https?):\/\/([^\/:?#]+)(?::(\d+))?(\/[^?#]*)?(\?[^#]*)?/);
 if (!m) {
@@ -63,23 +50,23 @@ if (!m) {
   let target = null;
 
   if (/^upos-.*-mirrorakam\.akamaized\.net$/.test(host)) {
-    target = cfg.OverseaCDN;
+    target = CDN;
   } else if (/^upos-sz-mirror[a-z0-9-]*ov\.bilivideo\.com$/.test(host)) {
-    target = cfg.OverseaCDN;
+    target = CDN;
   } else if (/^cn-hk-eq-[a-z0-9-]+\.bilivideo\.com$/.test(host)) {
-    target = cfg.OverseaCDN;
+    target = CDN;
   } else if (/^upos-sz-mirror[a-z0-9-]*bstar1\.bilivideo\.com$/.test(host)) {
-    target = cfg.BStarCDN;
+    target = CDN;
   } else if (/^upos-bstar1-mirrorakam\.akamaized\.net$/.test(host)) {
-    target = cfg.BStarCDN;
+    target = CDN;
   } else if (/^[a-z0-9-]+\.mcdn\.bilivideo\.cn$/.test(host)) {
-    target = cfg.PCDNCDN;
+    target = CDN;
     path = path.replace(/^\/v1\/resource(?=\/upgcxcode\/)/, "");
   } else if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) && port === "8000") {
-    target = cfg.PCDNCDN;
+    target = CDN;
     path = path.replace(/^\/v1\/resource(?=\/upgcxcode\/)/, "");
   } else if (port === "4480") {
-    target = cfg.MCDN;
+    target = MCDN;
   }
 
   if (!target || target === host || !/^\/(?:v1\/resource\/)?upgcxcode\//.test(path)) {
