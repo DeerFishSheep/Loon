@@ -14,9 +14,9 @@ VideoCDN = select,"阿里云 CDN","腾讯云 CDN","华为云 CDN","融合 CDN（
 force-http-engine-hosts = upos-sz-mirror*.bilivideo.com:80, cn-hk-eq-*.bilivideo.com:80, upos-*-mirrorakam.akamaized.net:80, *.mcdn.bilivideo.cn:8000, *.mcdn.bilivideo.cn:8082, *:4480, *:4483, *:9102
 
 [Script]
-http-request ^https?:\/\/[^\/]+\.(?:bilivideo\.com|bilivideo\.cn|akamaized\.net)(?::\d+)?\/(?:v1\/resource\/)?upgcxcode\/ script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/main/js/bilibili_cdn_redirect.js, argument="VideoCDN=${VideoCDN}", timeout=10, tag=📺 BiliBili.Redirect.CDN
-http-request ^https?:\/\/\d{1,3}(?:\.\d{1,3}){3}:8000\/v1\/resource\/upgcxcode\/ script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/main/js/bilibili_cdn_redirect.js, argument="VideoCDN=${VideoCDN}", timeout=10, tag=📺 BiliBili.Redirect.PCDN.raw
-http-request ^https?:\/\/[^\/:]+:4480\/upgcxcode\/ script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/main/js/bilibili_cdn_redirect.js, argument="VideoCDN=${VideoCDN}", timeout=10, tag=📺 BiliBili.Redirect.MCDN.4480
+http-request ^https?:\/\/[^\/]+\.(?:bilivideo\.com|bilivideo\.cn|akamaized\.net)(?::\d+)?\/(?:v1\/resource\/)?upgcxcode\/ script-path=https://cdn.jsdelivr.net/gh/DeerFishSheep/Loon@main/js/bilibili_cdn_redirect.js, argument="VideoCDN=${VideoCDN}", timeout=10, tag=📺 BiliBili.Redirect.CDN
+http-request ^https?:\/\/\d{1,3}(?:\.\d{1,3}){3}:8000\/v1\/resource\/upgcxcode\/ script-path=https://cdn.jsdelivr.net/gh/DeerFishSheep/Loon@main/js/bilibili_cdn_redirect.js, argument="VideoCDN=${VideoCDN}", timeout=10, tag=📺 BiliBili.Redirect.PCDN.raw
+http-request ^https?:\/\/[^\/:]+:4480\/upgcxcode\/ script-path=https://cdn.jsdelivr.net/gh/DeerFishSheep/Loon@main/js/bilibili_cdn_redirect.js, argument="VideoCDN=${VideoCDN}", timeout=10, tag=📺 BiliBili.Redirect.MCDN.4480
 
 [MITM]
 hostname = upos-sz-mirror*.bilivideo.com, cn-hk-eq-*.bilivideo.com, upos-*-mirrorakam.akamaized.net, *.mcdn.bilivideo.cn
