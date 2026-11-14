@@ -4,11 +4,10 @@
 #!appUrl=https://apps.apple.com/app/id6503940939
 #!version=1.3.18
 #!update=2026.02.04
-#!icon=https://i.hd-r.cn/07ee8249-c563-4af4-a332-15042dd0c9c1.webp
 
 [Script]
 # > Forward 解锁 Pro
-http-response https://fluxapi.vvebo.vip/v1/purchase/iap/subscription script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/refs/heads/main/Script/js/Forward_Crack_Universal.js, requires-body=true, timeout=60, tag=Forward Crack Universal
+http-response https://fluxapi.vvebo.vip/v1/purchase/iap/subscription script-path=https://raw.githubusercontent.com/DeerFishSheep/Loon/refs/heads/main/js/Forward_Crack_Universal.js, requires-body=true, timeout=60, tag=Forward Crack Universal
 
 [MITM]
 hostname = fluxapi.vvebo.vip
