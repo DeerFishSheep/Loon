@@ -1,8 +1,0 @@
-# Clash 规则集 —— 由 Loon 版「SpeedTest.list」转换
-# 来源: https://github.com/DeerFishSheep/Loon/blob/main/rules/SpeedTest.list
-# 规则数: 2
-# > SpeedTest
-
-payload:
-  - 'DOMAIN-SUFFIX,speedtest.net'
-  - 'DOMAIN,app-measurement.com'
